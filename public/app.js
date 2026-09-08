@@ -101,3 +101,18 @@ function orderModal(id){const m=state.data.meals.find(x=>x.id===id);if(!m||state
 document.addEventListener('click',async event=>{const b=event.target.closest('button');if(!b)return;try{if(b.dataset.orderMeal)orderModal(Number(b.dataset.orderMeal));if(b.dataset.countDelta){const input=$('#portion-count');input.value=Math.max(1,Math.min(500,Number(input.value||1)+Number(b.dataset.countDelta)));}if(b.dataset.cancelOrder){b.disabled=true;await api('order',{date:state.date,items:[{id:Number(b.dataset.cancelOrder),quantity:0}]});$('#modal').close();await render();toast('Jídlo je z objednávky odebrané.');}}catch(error){b.disabled=false;toast(error.message,true);}});
 document.addEventListener('submit',async event=>{if(event.target.id!=='simple-order-form')return;event.preventDefault();const form=event.target,button=form.querySelector('.primary');button.disabled=true;try{const quantity=Number(new FormData(form).get('quantity'));if(!Number.isInteger(quantity)||quantity<1||quantity>500)throw new Error('Zadejte počet porcí od 1 do 500.');await api('order',{date:state.date,items:[{id:Number(form.dataset.id),quantity}]});$('#modal').close();await render();toast('Objednávka je uložená.');}catch(error){$('#modal .form-error').textContent=error.message;button.disabled=false;}});
 
+
+/* Rozložení převzaté z mobilního rytmu fitness aplikace: kompaktní hlavička,
+   dotykové plochy min. 48 px a fixní spodní navigace se symbolem i popiskem. */
+shell = function(content){
+  const admin=state.user.role==='admin';
+  const links=admin
+    ? [['dashboard','Přehled','⌂'],['menu','Jídelníček','▤'],['companies','Firmy','♧'],['settings','Účet','⚙']]
+    : [['menu','Jídelníček','▤'],['orders','Souhrn','✓'],['settings','Účet','◉']];
+  return `<div class="fitness-shell">
+    <header class="fitness-header"><a href="/" class="fitness-brand"><img src="/brand.svg" alt="" width="36" height="36"><span>Srub Podkozí<small>${admin?'SPRÁVA RESTAURACE':'FIREMNÍ STRAVOVÁNÍ'}</small></span></a><span class="fitness-user">${esc(admin?'Správa':state.user.name)}</span></header>
+    <main id="content" class="fitness-content">${content}</main>
+    <nav class="fitness-bottom-nav" aria-label="Hlavní navigace"><div>${links.map(([view,label,icon])=>`<button class="${state.view===view?'selected':''}" data-view="${view}" aria-current="${state.view===view?'page':'false'}"><span class="fitness-nav-icon" aria-hidden="true">${icon}</span><span>${label}</span></button>`).join('')}</div></nav>
+    ${state.demo?'<div class="demo-label">Ukázková aplikace · testovací data</div>':''}
+  </div>`;
+};
