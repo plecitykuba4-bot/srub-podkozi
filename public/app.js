@@ -67,7 +67,7 @@ document.addEventListener('submit',async e=>{e.preventDefault();const f=e.target
  if(f.id==='password-form'){if(data.password!==data.confirm)throw new Error('Nová hesla se neshodují.');await api('password',data);state.dirty=false;await boot();toast('Heslo změněno. Přihlaste se novým heslem.');}
  }catch(err){const error=f.querySelector('.form-error')||$('#modal[open] .form-error');if(error)error.textContent=err.message;else toast(err.message,true);}finally{if(b)b.disabled=false;}});
 window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.returnValue='';}});
-async function boot(){const me=await api('me');state={...state,...me,date:me.clock.hour>=8?plus(me.clock.date,1):me.clock.date,view:me.user?.role==='admin'?'dashboard':'menu',dirty:false,filter:'all'};if(me.user?.role==='admin')state.date=me.clock.date;await render();}
+async function boot(){const me=await api('me');state={...state,...me,date:me.clock.hour>=8?plus(me.clock.date,1):me.clock.date,view:me.user?.role==='admin'?'dashboard':'menu',dirty:false,filter:'all'};if(me.user?.role==='admin')state.date=me.clock.date;if(me.demo&&me.user)state.devUsers=(await api('dev-users')).users;await render();}
 boot().catch(e=>{$('#app').innerHTML=empty('Aplikace není dostupná',esc(e.message));});
 setInterval(async()=>{if(!state.user||state.view!=='menu')return;try{const {clock}=await api('me');state.clock=clock;const locked=state.date<clock.date||(state.date===clock.date&&clock.hour>=8);if(state.data&&locked!==state.data.closed){state.data.closed=locked;$('#content').innerHTML=menuView();}}catch{/* Server validates every save even during a temporary connection loss. */}},30000);
 
@@ -110,9 +110,22 @@ shell = function(content){
     ? [['dashboard','Přehled','⌂'],['menu','Jídelníček','▤'],['companies','Firmy','♧'],['settings','Účet','⚙']]
     : [['menu','Jídelníček','▤'],['orders','Souhrn','✓'],['settings','Účet','◉']];
   return `<div class="fitness-shell">
-    <header class="fitness-header"><a href="/" class="fitness-brand"><img src="/brand.svg" alt="" width="36" height="36"><span>Srub Podkozí<small>${admin?'SPRÁVA RESTAURACE':'FIREMNÍ STRAVOVÁNÍ'}</small></span></a><span class="fitness-user">${esc(admin?'Správa':state.user.name)}</span></header>
+    <header class="fitness-header"><a href="/" class="fitness-brand"><img src="/brand.svg" alt="" width="36" height="36"><span>Srub Podkozí<small>${admin?'SPRÁVA RESTAURACE':'FIREMNÍ STRAVOVÁNÍ'}</small></span></a><div class="fitness-account"><span>${esc(admin?'Správa':state.user.name)}</span><button data-action="logout" aria-label="Odhlásit se">↪ <b>Odhlásit</b></button></div></header>
     <main id="content" class="fitness-content">${content}</main>
     <nav class="fitness-bottom-nav" aria-label="Hlavní navigace"><div>${links.map(([view,label,icon])=>`<button class="${state.view===view?'selected':''}" data-view="${view}" aria-current="${state.view===view?'page':'false'}"><span class="fitness-nav-icon" aria-hidden="true">${icon}</span><span>${label}</span></button>`).join('')}</div></nav>
     ${state.demo?'<div class="demo-label">Ukázková aplikace · testovací data</div>':''}
   </div>`;
 };
+
+// Virtuální přepínač je dostupný výhradně v lokálním demu (DEMO=true).
+// Server kontroluje režim i při přímém volání API; v produkci cesta neexistuje.
+function devSwitcher(){
+  if(!state.demo||!state.devUsers?.length)return '';
+  const groups=[['Správa',state.devUsers.filter(u=>u.role==='admin')],['Firmy',state.devUsers.filter(u=>u.role==='company')]];
+  return `<details class="dev-switcher"><summary><span aria-hidden="true">⚗</span> Virtuální přepínač účtů <small>— ${esc(state.user.name)}</small><b>⌄</b></summary><div><p>Pouze pro vývoj. Přepne pohled bez zadávání hesla.</p>${groups.map(([label,users])=>users.length?`<section><strong>${label}</strong><span>${users.map(u=>`<button data-dev-switch="${u.id}" ${u.id===state.user.id?'disabled':''}>${esc(u.name)}${u.id===state.user.id?' ✓':''}</button>`).join('')}</span></section>`:'').join('')}</div></details>`;
+}
+const baseShell=shell;
+shell=function(content){return `${devSwitcher()}${baseShell(content)}`;};
+const previousBoot=boot;
+boot=async function(){await previousBoot();if(state.demo&&state.user){try{state.devUsers=(await api('dev-users')).users;await render();}catch(error){toast(error.message,true);}}};
+document.addEventListener('click',async event=>{const button=event.target.closest('[data-dev-switch]');if(!button)return;button.disabled=true;try{await api('dev-switch',{id:Number(button.dataset.devSwitch)});state.devUsers=null;await boot();}catch(error){button.disabled=false;toast(error.message,true);}});

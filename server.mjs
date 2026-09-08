@@ -93,6 +93,16 @@ const server=http.createServer(async(req,res)=>{
    return send(200,{ok:true},{'Set-Cookie':`srub_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200${process.env.COOKIE_SECURE==='true'?'; Secure':''}`});
   }
   const user=session(req);
+  if(demo&&path==='/api/dev-users'&&req.method==='GET')return send(200,{users:all('SELECT u.id,u.role,u.email,COALESCE(c.name,\'Restaurace Srub Podkozí\') name FROM users u LEFT JOIN companies c ON c.id=u.company_id ORDER BY CASE WHEN u.role=\'admin\' THEN 0 ELSE 1 END,c.name')});
+  if(demo&&path==='/api/dev-switch'&&req.method==='POST'){
+   if(!user)return send(401,{error:'Přihlaste se prosím.'});
+   if(!Number.isInteger(body.id))throw new Error('Neplatný účet.');
+   const target=get('SELECT u.id,u.role,c.active FROM users u LEFT JOIN companies c ON c.id=u.company_id WHERE u.id=?',body.id);
+   if(!target||(target.role==='company'&&!target.active))throw new Error('Účet není dostupný.');
+   const old=(req.headers.cookie||'').match(/srub_session=([^;]+)/)?.[1]||'';run('DELETE FROM sessions WHERE token=?',createHash('sha256').update(old).digest('hex'));
+   const token=randomBytes(32).toString('hex');run('INSERT INTO sessions VALUES(?,?,?)',createHash('sha256').update(token).digest('hex'),target.id,Date.now()+43200000);
+   return send(200,{ok:true},{'Set-Cookie':`srub_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`});
+  }
   if(path==='/api/me'&&req.method==='GET')return send(200,{user,demo,clock:pragueNow()});
   if(!user)return send(401,{error:'Přihlaste se prosím.'});
   if(path==='/api/logout'&&req.method==='POST'){const token=(req.headers.cookie||'').match(/srub_session=([^;]+)/)?.[1]||'';run('DELETE FROM sessions WHERE token=?',createHash('sha256').update(token).digest('hex'));return send(200,{ok:true},{'Set-Cookie':'srub_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});}
