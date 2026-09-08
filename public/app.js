@@ -129,3 +129,17 @@ shell=function(content){return `${devSwitcher()}${baseShell(content)}`;};
 const previousBoot=boot;
 boot=async function(){await previousBoot();if(state.demo&&state.user){try{state.devUsers=(await api('dev-users')).users;await render();}catch(error){toast(error.message,true);}}};
 document.addEventListener('click',async event=>{const button=event.target.closest('[data-dev-switch]');if(!button)return;button.disabled=true;try{await api('dev-switch',{id:Number(button.dataset.devSwitch)});state.devUsers=null;await boot();}catch(error){button.disabled=false;toast(error.message,true);}});
+
+/* Navigace s vlastním SVG systémem: žádné znakové pseudoikony. */
+const fitnessIcons={
+ dashboard:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+ menu:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+ orders:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/><path d="M5 5h6M5 19h14"/></svg>',
+ companies:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c.6-3.5 2.4-5.5 5.5-5.5s4.9 2 5.5 5.5M16 7h5M18.5 4.5v5"/></svg>',
+ settings:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05-2.1 2.1-.05-.05a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.1A1.7 1.7 0 0 0 10.7 18.6a1.7 1.7 0 0 0-1.88.34l-.05.05-2.1-2.1.05-.05A1.7 1.7 0 0 0 7.06 15a1.7 1.7 0 0 0-1.55-1.03h-.1v-3h.1A1.7 1.7 0 0 0 7.06 9.94a1.7 1.7 0 0 0-.34-1.88l-.05-.05 2.1-2.1.05.05a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.55v-.1h3v.1A1.7 1.7 0 0 0 15.76 6.3a1.7 1.7 0 0 0 1.88-.34l.05-.05 2.1 2.1-.05.05a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.1v3h-.1A1.7 1.7 0 0 0 19.4 15Z"/></svg>'
+};
+shell=function(content){
+ const admin=state.user.role==='admin';
+ const links=admin?[['dashboard','Přehled'],['menu','Jídelníček'],['companies','Firmy'],['settings','Účet']]:[['menu','Jídelníček'],['orders','Souhrn'],['settings','Účet']];
+ return `${devSwitcher()}<div class="fitness-shell"><header class="fitness-header"><a href="/" class="fitness-brand"><img src="/brand.svg" alt="" width="40" height="40"><span>Srub Podkozí<small>${admin?'Správa restaurace':'Firemní stravování'}</small></span></a><div class="fitness-account"><span>${esc(state.user.name)}</span><button data-action="logout" aria-label="Odhlásit se"><span class="logout-icon">↪</span><b>Odhlásit</b></button></div></header><main id="content" class="fitness-content">${content}</main><nav class="fitness-bottom-nav" aria-label="Hlavní navigace"><div>${links.map(([view,label])=>`<button class="${state.view===view?'selected':''}" data-view="${view}" aria-current="${state.view===view?'page':'false'}"><span class="fitness-nav-icon">${fitnessIcons[view]}</span><span>${label}</span></button>`).join('')}</div></nav>${state.demo?'<div class="demo-label">Ukázková aplikace</div>':''}</div>`;
+};
