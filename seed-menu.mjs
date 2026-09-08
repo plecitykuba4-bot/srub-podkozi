@@ -1,0 +1,28 @@
+// Přepis uživatelem dodaného poledního menu, 7.–11. září 2026.
+export const weekMenu = [
+ ['2026-09-07','Pórková','', '1, 7, 9, 12',55,'Polévka'],
+ ['2026-09-07','Špekáčky','Na pivu, chléb','1, 9, 10, 12',145,'Hlavní jídlo'],
+ ['2026-09-07','Kuřecí paličky','Na zelenině, rýže','1, 7, 9, 12',165,'Hlavní jídlo'],
+ ['2026-09-07','Hovězí po štěpánsku','Houskový knedlík','1, 3, 7, 9, 10, 12',185,'Hlavní jídlo'],
+ ['2026-09-07','Krůtí steak','Čedarová omáčka, opečené brambory','1, 7, 9, 12',230,'Hlavní jídlo'],
+ ['2026-09-08','Česnekový krém','Krutony','1, 7, 9, 12',60,'Polévka'],
+ ['2026-09-08','Bramborové noky','Kuřecí maso, smetana','1, 3, 7, 9, 12',145,'Hlavní jídlo'],
+ ['2026-09-08','Zeleninový salát','Balkánský sýr, restovaná cuketa, červená cibule','7, 9, 12',165,'Hlavní jídlo'],
+ ['2026-09-08','Záhorácký závitek','Šťouchaný brambor','1, 7, 9, 12',185,'Hlavní jídlo'],
+ ['2026-09-08','Hovězí na houbách','Rýže','1, 7, 9, 12',220,'Hlavní jídlo'],
+ ['2026-09-09','Gulášová','','1, 9, 12',60,'Polévka'],
+ ['2026-09-09','Tarhoňové zeleninové rizoto','Smetana, sýr','1, 3, 7, 9, 12',145,'Hlavní jídlo'],
+ ['2026-09-09','Vepřové kousky na paprice','Houskový knedlík','1, 3, 7, 9, 12',165,'Hlavní jídlo'],
+ ['2026-09-09','Hovězí azu po tatarsku','Rýže','1, 7, 9, 10, 12',185,'Hlavní jídlo'],
+ ['2026-09-09','Smažený eidam','Vařené brambory, naše tatarka','1, 3, 7, 9, 12',210,'Hlavní jídlo'],
+ ['2026-09-10','Hovězí vývar','Maso, nudle, zelenina','1, 3, 9, 12',60,'Polévka'],
+ ['2026-09-10','Květákové placičky','Vařené brambory, naše tatarka','1, 3, 7, 9, 12',145,'Hlavní jídlo'],
+ ['2026-09-10','Penne','Sýrová omáčka, šunka, kukuřice','1, 3, 7, 9, 12',165,'Hlavní jídlo'],
+ ['2026-09-10','Kuřecí chilli guláš','Houskový knedlík','1, 3, 7, 9, 12',185,'Hlavní jídlo'],
+ ['2026-09-10','Vepřový gyros v tortille','','1, 7, 9, 12',220,'Hlavní jídlo'],
+ ['2026-09-11','Bramborová','S hříbky','1, 7, 9, 12',60,'Polévka'],
+ ['2026-09-11','Zapečené palačinky','S tvarohem a rozinkami','1, 3, 7, 12',145,'Hlavní jídlo'],
+ ['2026-09-11','Kuřecí perkelt','Halušky','1, 3, 7, 9, 12',165,'Hlavní jídlo'],
+ ['2026-09-11','Holandský řízek','Bramborová kaše, kyselá okurka','1, 3, 7, 9, 12',185,'Hlavní jídlo'],
+ ['2026-09-11','Caesar burger','Kuřecí maso, římský salát, parmezán, caesar dresink, hranolky','1, 3, 4, 7, 9, 10, 12',230,'Hlavní jídlo']
+];
