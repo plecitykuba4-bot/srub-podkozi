@@ -47,6 +47,33 @@ if(!get('SELECT id FROM users LIMIT 1')){
   for(const meal of all('SELECT * FROM meals WHERE date IN (?,?)',today,dayAfter(today,1))){for(const c of all('SELECT * FROM companies')){const q=(meal.id+c.id)%5+1;run('INSERT INTO orders VALUES(?,?,?,?,?,?,?)',c.id,meal.id,q,portionPrice(meal,c),c.fee,c.packaging,new Date().toISOString());}}
  }
 }
+// Lokální ukázka má záměrně deset firem a objednávky pro všechny dny menu,
+// aby se dal ověřit skutečný provozní soupis restaurace.
+if(demo){
+ const demoFirms=[
+  ['Ateliér Novotný','firma@demo.cz','Podkozí 24, Chyňava',13900,'own',0],
+  ['Dřevostavby Beroun','drevo@demo.cz','Beroun, U Pily 18',12900,'disposable',800],
+  ['Studio Zahrada','zahrada@demo.cz','Chyňava 106',null,'disposable',800],
+  ['Kovovýroba Král','kral@demo.cz','Beroun, Tyršova 12',13500,'own',0],
+  ['Vinařství Hřebec','hrebec@demo.cz','Nižbor 45',14200,'disposable',700],
+  ['Pekařství U mostu','most@demo.cz','Zdice, Náměstí 8',12900,'own',0],
+  ['Stavby Vltava','vltava@demo.cz','Beroun, Plzeňská 92',13900,'disposable',800],
+  ['Technologie Rondo','rondo@demo.cz','Rudná 31',14500,'own',0],
+  ['Kanceláře Malina','malina@demo.cz','Loděnice 17',13500,'disposable',700],
+  ['Auto Kříž','kriz@demo.cz','Králův Dvůr 64',null,'own',0]
+ ];
+ transaction(()=>{
+  for(const f of demoFirms){
+   if(get('SELECT id FROM companies WHERE email=?',f[1]))continue;
+   const id=run('INSERT INTO companies(name,email,address,price,packaging,fee) VALUES(?,?,?,?,?,?)',...f).lastInsertRowid;
+   run('INSERT INTO users(email,password,role,company_id) VALUES(?,?,?,?)',f[1],hash('SrubDemo2026!'),'company',id);
+  }
+  for(const meal of all('SELECT * FROM meals'))for(const c of all('SELECT * FROM companies')){
+   const q=(meal.id*3+c.id*2)%6+1;
+   run('INSERT OR IGNORE INTO orders VALUES(?,?,?,?,?,?,?)',c.id,meal.id,q,portionPrice(meal,c),c.fee,c.packaging,new Date().toISOString());
+  }
+ });
+}
 function session(req){const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('srub_session='))?.slice(13);if(!raw)return null;const token=createHash('sha256').update(raw).digest('hex');return get(`SELECT u.id,u.email,u.role,u.company_id,COALESCE(c.name,'Restaurace Srub Podkozí') name FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN companies c ON c.id=u.company_id WHERE s.token=? AND s.expires>? AND (u.role='admin' OR c.active=1)`,token,Date.now());}
 function rowsFor(date,company){return all(`SELECT o.*,m.name,m.description,m.date,c.name company,c.address FROM orders o JOIN meals m ON m.id=o.meal_id JOIN companies c ON c.id=o.company_id WHERE m.date=? ${company?'AND o.company_id=?':''} ORDER BY c.name,m.id`,...company?[date,company]:[date]);}
 function summary(date){const rows=rowsFor(date);return {date,rows,total:rows.reduce((s,r)=>s+r.quantity,0),firms:new Set(rows.map(r=>r.company_id)).size};}
