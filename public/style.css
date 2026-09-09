@@ -100,3 +100,35 @@ body,.fitness-shell{background:var(--fitness-bg);color:var(--fitness-text);backg
 .fitness-bottom-nav{background:#fffdfa;border-top-color:#eee2cf}.fitness-bottom-nav button{color:#776b58}.fitness-bottom-nav button.selected{color:#ffb000}.fitness-bottom-nav button.selected::before{background:#ffb000}.dev-switcher{background:#fff3d5;border-color:#f2d495}.dev-switcher summary span{color:#a96c00}.dev-switcher button:disabled{background:#ffb000;border-color:#ffb000;color:#231f18}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline-color:#ffb000}
 @media(min-width:768px){.fitness-bottom-nav button.selected{background:#fff4dd;color:#a96c00}.fitness-bottom-nav button.selected::before{background:#ffb000}}
+
+/* Finální obrazovka přehledu: rytmus podle schválené mobilní předlohy, bez fotek jídel. */
+.fitness-content{max-width:470px;margin:0 auto;padding:14px 14px calc(76px + env(safe-area-inset-bottom));}
+.fitness-content::before{display:none}
+.photo-layout{width:100%;max-width:390px;margin:0 auto;padding:2px 0 6px}
+.photo-layout-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:3px 1px 12px}
+.photo-layout-head h1{margin:0;color:#17130e;font-size:25px;line-height:1.06;letter-spacing:-1.1px;font-weight:850}
+.photo-layout-head p{margin:3px 0 0;color:#8c8172;font-size:12px;line-height:1.2}
+.photo-layout-meta{display:flex;align-items:center;gap:7px;padding-top:2px;color:#685e51}
+.photo-layout-meta small{font-size:10px;font-weight:700;text-transform:capitalize}
+.photo-bell{display:grid;place-items:center;width:28px;min-height:28px;padding:0;border:0;background:transparent;color:#3d362d;font-size:18px}
+.photo-date{display:flex;justify-content:flex-end;margin:-3px 0 10px}
+.photo-date label{display:flex;align-items:center;gap:6px;min-height:31px;padding:0 10px;border:1px solid #eee2cf;border-radius:10px;background:#fffdfa;color:#3b342b;font-size:10px;font-weight:750}
+.photo-date label>span{font-size:12px;color:#a96c00}.photo-date input{width:102px;min-height:25px;padding:0;border:0;background:transparent;color:#3b342b;font:inherit}.photo-date input:focus{outline:0}
+.photo-total{display:flex;justify-content:space-between;align-items:center;min-height:109px;padding:15px 17px 13px;border:1px solid #f1daa3;border-radius:11px;background:#fff1cf}
+.photo-total span{display:block;margin-bottom:2px;color:#8f6206;font-size:9px;font-weight:800;letter-spacing:.35px}
+.photo-total strong{display:block;color:#17130e;font-size:52px;line-height:.94;font-weight:900;letter-spacing:-3px}
+.photo-total strong small{font-size:17px;letter-spacing:-.4px;font-weight:800}
+.photo-total p{margin:8px 0 0;color:#695c48;font-size:10px;font-weight:650}
+.photo-total-mark{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:#ffe7a9;color:#bd7700;font-size:28px}
+.photo-section{margin-top:18px}.photo-section-head{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:8px}
+.photo-section-head h2{margin:0;color:#242019;font-size:15px;line-height:1.2;font-weight:850;letter-spacing:-.35px}
+.photo-add,.photo-show{min-height:28px;padding:4px 10px;border-radius:9px;font-size:10px;font-weight:800;white-space:nowrap}
+.photo-add{border:1px solid #ffb000;background:#ffb000;color:#2a1b00}.photo-show{border:1px solid #eee2cf;background:#fffdfa;color:#4d453a}
+.photo-list{display:grid;gap:6px}.photo-meal,.photo-company{display:flex;align-items:center;gap:10px;min-height:56px;padding:7px 10px;border:1px solid #f0e6d6;border-radius:10px;background:#fffdfa;box-shadow:0 2px 7px rgb(43 31 12 / .035)}
+.photo-meal-mark,.photo-company-mark{display:grid;place-items:center;width:35px;height:35px;flex:0 0 35px;border-radius:9px;background:#fff0cd;color:#a96c00;font-size:10px;font-weight:900}
+.photo-meal>div,.photo-company>div{flex:1;min-width:0}.photo-meal h3,.photo-company h3{margin:0;overflow:hidden;color:#2b251e;font-size:12px;line-height:1.25;font-weight:850;text-overflow:ellipsis;white-space:nowrap}.photo-meal p,.photo-company p{margin:2px 0 0;overflow:hidden;color:#887b6a;font-size:9px;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+.photo-meal>strong{display:flex;flex-direction:column;align-items:flex-end;color:#241f18;font-size:17px;line-height:.9;letter-spacing:-.6px}.photo-meal>strong small{margin-top:3px;color:#887b6a;font-size:8px;font-weight:700;letter-spacing:0}
+.photo-arrow{color:#8b7d6a;font-size:21px;font-weight:400;line-height:1}.photo-firms{margin-top:19px}.photo-company{min-height:51px}.photo-company-mark{background:#f7f2e9;color:#776b58;font-size:16px}.photo-status{display:inline-flex;align-items:center;gap:3px;padding:5px 7px;border-radius:999px;background:#fff0c9;color:#8f6206;font-size:8px;font-weight:850;white-space:nowrap}.photo-status::first-letter{color:#ffb000}.photo-empty{margin:0;padding:16px;border:1px dashed #eadbc2;border-radius:10px;color:#776b58;font-size:12px;text-align:center}
+.fitness-bottom-nav{min-height:57px;background:#fffdfa}.fitness-bottom-nav button{height:57px;min-height:57px;padding:3px 3px 2px;gap:1px;color:#665e54;font-size:8px;font-weight:650}.fitness-bottom-nav button.selected{color:#d28700}.fitness-bottom-nav button.selected::before{left:13px;right:13px;height:2px;background:#ffb000}.fitness-nav-icon{width:18px;height:18px}.fitness-nav-icon svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.fitness-bottom-nav button.selected .fitness-nav-icon svg:first-child{stroke:#d28700}
+@media(min-width:768px){.fitness-content{max-width:540px;padding-top:22px}.fitness-bottom-nav{padding:0}.fitness-bottom-nav>div{display:flex;flex-direction:row}.fitness-bottom-nav button{height:57px;min-height:57px;flex-direction:column;justify-content:center;gap:1px;padding:3px;font-size:9px;border-radius:0}.fitness-bottom-nav button.selected{background:#fffdfa;color:#d28700}.fitness-bottom-nav button.selected::before{top:0;bottom:auto;left:13px;right:13px;width:auto;height:2px}.fitness-nav-icon svg{width:17px;height:17px}}
+@media(max-width:355px){.photo-total strong{font-size:47px}.photo-total{padding-left:14px;padding-right:12px}.photo-total-mark{width:51px;height:51px}.photo-company{gap:7px}.photo-status{padding:4px;font-size:7px}.photo-layout-head h1{font-size:23px}}

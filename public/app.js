@@ -157,3 +157,43 @@ shell=function(content){
  const links=admin?[['dashboard','Přehled'],['menu','Jídelníček'],['orders','Objednávky'],['delivery','Rozvoz'],['settings','Nastavení']]:[['menu','Jídelníček'],['orders','Objednávky'],['settings','Nastavení']];
  return `${devSwitcher()}<div class="fitness-shell"><header class="fitness-header"><a href="/" class="fitness-brand"><img src="/brand.svg" alt="" width="40" height="40"><span>Srub Podkozí<small>${admin?'Správa restaurace':'Firemní stravování'}</small></span></a><div class="fitness-account"><span>${esc(state.user.name)}</span><button data-action="logout" aria-label="Odhlásit se"><span class="logout-icon">↪</span><b>Odhlásit</b></button></div></header><main id="content" class="fitness-content">${content}</main><nav class="fitness-bottom-nav" aria-label="Hlavní navigace"><div>${links.map(([view,label])=>`<button class="${state.view===view?'selected':''}" data-view="${view}" aria-current="${state.view===view?'page':'false'}"><span class="fitness-nav-icon">${fitnessIcons[view]}</span><span>${label}</span></button>`).join('')}</div></nav>${state.demo?'<div class="demo-label">Ukázková aplikace</div>':''}</div>`;
 };
+
+// Schválené mobilní rozhraní: struktura přehledu podle dodaného vzoru, bez fotografií jídel.
+fitnessIcons.dashboard='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10h-6v-6H9v6H3z"/></svg>';
+fitnessIcons.menu='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v7M3.5 3v4a2.5 2.5 0 0 0 5 0V3M6 10v11M17 3v18M17 3c2.5 1.5 3.5 4 3.5 7H17"/></svg>';
+fitnessIcons.orders='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6"/></svg>';
+fitnessIcons.delivery='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h11v10H3zM14 10h3l4 4v2h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
+
+dashboard=function(){
+ const d=state.data,byMeal={};
+ for(const row of d.rows)byMeal[row.name]=(byMeal[row.name]||0)+row.quantity;
+ const meals=Object.entries(byMeal),firmIds=[...new Set(d.rows.map(row=>row.company_id))];
+ const firmRows=firmIds.map(id=>d.rows.filter(row=>row.company_id===id));
+ const dateShort=dateLabel(state.date,{weekday:'short',day:'numeric',month:'numeric'}).replace(/\.$/,'');
+ return `<section class="photo-layout">
+   <header class="photo-layout-head">
+     <div><h1>Srub Podkozí</h1><p>Firemní obědy, jednoduše</p></div>
+     <div class="photo-layout-meta"><small>${dateShort}</small><button class="photo-bell" type="button" aria-label="Oznámení">♧</button></div>
+   </header>
+   <div class="photo-date"><label><span>▣</span> Denní obědy <input aria-label="Datum přehledu" type="date" id="date-picker" value="${state.date}"></label></div>
+   <article class="photo-total">
+     <div><span>♜ &nbsp; CELKEM NA DNES</span><strong>${d.total}<small> porcí</small></strong><p>${d.firms} ${plural(d.firms,'firma','firmy','firem')} &nbsp; | &nbsp; ${meals.length} ${plural(meals.length,'jídlo','jídla','jídel')} &nbsp; | &nbsp; ${firmIds.length?'1 rozvoz':'bez rozvozu'}</p></div>
+     <div class="photo-total-mark" aria-hidden="true">▥</div>
+   </article>
+   <section class="photo-section">
+     <div class="photo-section-head"><h2>Dnešní jídla v kuchyni</h2><button class="photo-add" data-action="new-meal">＋ Přidat jídlo</button></div>
+     <div class="photo-list">${meals.map(([name,quantity],index)=>`<article class="photo-meal">
+       <span class="photo-meal-mark">${String(index+1).padStart(2,'0')}</span>
+       <div><h3>${esc(name)}</h3><p>Připravit a zabalit</p></div>
+       <strong>${quantity}<small> porcí</small></strong><span class="photo-arrow">›</span>
+     </article>`).join('')||'<p class="photo-empty">Zatím žádné objednávky.</p>'}</div>
+   </section>
+   <section class="photo-section photo-firms">
+     <div class="photo-section-head"><h2>Firemní objednávky</h2><button class="photo-show" data-view="delivery">Zobrazit všechny</button></div>
+     <div class="photo-list">${firmRows.map(rows=>{const total=rows.reduce((sum,row)=>sum+row.quantity,0),company=rows[0]?.company||'Firma';return `<article class="photo-company">
+       <span class="photo-company-mark">▥</span><div><h3>${esc(company)}</h3><p>${total} ${plural(total,'porce','porce','porcí')} &nbsp; | &nbsp; ${esc(rows[0].address||'Rozvoz')}</p></div>
+       <span class="photo-status">● Potvrzeno</span><span class="photo-arrow">›</span>
+     </article>`;}).join('')||'<p class="photo-empty">Zatím žádné firemní objednávky.</p>'}</div>
+   </section>
+ </section>`;
+};
