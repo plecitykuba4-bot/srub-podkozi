@@ -132,3 +132,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .fitness-bottom-nav{min-height:57px;background:#fffdfa}.fitness-bottom-nav button{height:57px;min-height:57px;padding:3px 3px 2px;gap:1px;color:#665e54;font-size:8px;font-weight:650}.fitness-bottom-nav button.selected{color:#d28700}.fitness-bottom-nav button.selected::before{left:13px;right:13px;height:2px;background:#ffb000}.fitness-nav-icon{width:18px;height:18px}.fitness-nav-icon svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.fitness-bottom-nav button.selected .fitness-nav-icon svg:first-child{stroke:#d28700}
 @media(min-width:768px){.fitness-content{max-width:540px;padding-top:22px}.fitness-bottom-nav{padding:0}.fitness-bottom-nav>div{display:flex;flex-direction:row}.fitness-bottom-nav button{height:57px;min-height:57px;flex-direction:column;justify-content:center;gap:1px;padding:3px;font-size:9px;border-radius:0}.fitness-bottom-nav button.selected{background:#fffdfa;color:#d28700}.fitness-bottom-nav button.selected::before{top:0;bottom:auto;left:13px;right:13px;width:auto;height:2px}.fitness-nav-icon svg{width:17px;height:17px}}
 @media(max-width:355px){.photo-total strong{font-size:47px}.photo-total{padding-left:14px;padding-right:12px}.photo-total-mark{width:51px;height:51px}.photo-company{gap:7px}.photo-status{padding:4px;font-size:7px}.photo-layout-head h1{font-size:23px}}
+
+/* Spodní navigace odpovídá nízkému panelu ze schválené předlohy. */
+.fitness-bottom-nav{height:50px;min-height:50px;padding:0;background:#fffdfa;border-top:1px solid #eee2cf}
+.fitness-bottom-nav>div{height:50px;overflow:hidden}
+.fitness-bottom-nav button{height:50px;min-height:50px;padding:3px 2px 2px;gap:0;font-size:8px;line-height:1.05;font-weight:650}
+.fitness-nav-icon{width:21px;height:21px;margin-bottom:1px}
+.fitness-nav-icon svg{width:19px;height:19px;stroke-width:1.85}
+.fitness-bottom-nav button.selected::before{left:15px;right:15px;height:2px}
+.fitness-content{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+@media(min-width:768px){.fitness-bottom-nav{height:50px;min-height:50px;padding:0}.fitness-bottom-nav>div{height:50px;flex-direction:row;gap:0}.fitness-bottom-nav button{height:50px;min-height:50px;flex:1 1 20%;padding:3px 2px 2px;gap:0;font-size:8px;justify-content:center}.fitness-nav-icon{width:21px;height:21px;margin-bottom:1px}.fitness-nav-icon svg{width:19px;height:19px}.fitness-bottom-nav button.selected{background:#fffdfa}.fitness-bottom-nav button.selected::before{top:0;left:15px;right:15px;width:auto;height:2px}}
