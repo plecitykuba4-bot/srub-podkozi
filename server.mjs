@@ -72,6 +72,12 @@ if(demo){
    const q=(meal.id*3+c.id*2)%6+1;
    run('INSERT OR IGNORE INTO orders VALUES(?,?,?,?,?,?,?)',c.id,meal.id,q,portionPrice(meal,c),c.fee,c.packaging,new Date().toISOString());
   }
+  const own=['Ateliér Novotný','Auto Kříž','Dřevostavby Beroun','Kanceláře Malina','Kovovýroba Král'];
+  for(const company of all('SELECT id,name FROM companies')){
+   const packaging=own.includes(company.name)?'own':'disposable',fee=packaging==='own'?0:800;
+   run('UPDATE companies SET packaging=?,fee=? WHERE id=?',packaging,fee,company.id);
+   run('UPDATE orders SET packaging=?,fee=? WHERE company_id=?',packaging,fee,company.id);
+  }
  });
 }
 function session(req){const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('srub_session='))?.slice(13);if(!raw)return null;const token=createHash('sha256').update(raw).digest('hex');return get(`SELECT u.id,u.email,u.role,u.company_id,COALESCE(c.name,'Restaurace Srub Podkozí') name FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN companies c ON c.id=u.company_id WHERE s.token=? AND s.expires>? AND (u.role='admin' OR c.active=1)`,token,Date.now());}
