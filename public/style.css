@@ -162,3 +162,12 @@ h1,h2,h3,h4,p,button,input,select,textarea,label,.photo-layout-head h1,.photo-se
 .fitness-bottom-nav button{font-size:8px;font-weight:600;letter-spacing:-.12px;overflow:visible}
 .fitness-nav-icon{width:20px;height:20px;margin:0 0 1px}
 .fitness-nav-icon svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+
+/* Větší potvrzená varianta spodní navigace. */
+.fitness-bottom-nav{height:58px;min-height:58px}
+.fitness-bottom-nav>div{height:58px}
+.fitness-bottom-nav button{height:58px;min-height:58px;padding:5px 2px 4px;gap:2px;font-size:9px;line-height:1.1}
+.fitness-nav-icon{width:23px;height:23px;margin:0}
+.fitness-nav-icon svg{width:20px;height:20px;stroke-width:1.8}
+.fitness-content{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+@media(min-width:768px){.fitness-bottom-nav,.fitness-bottom-nav>div{height:58px;min-height:58px}.fitness-bottom-nav button{height:58px;min-height:58px;padding:5px 2px 4px;gap:2px;font-size:9px}.fitness-nav-icon{width:23px;height:23px}.fitness-nav-icon svg{width:20px;height:20px}}
