@@ -157,3 +157,8 @@ body{font-size:16px}
 /* Stejná systémová bezpatková typografie jako ve fitness aplikaci. */
 body{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 h1,h2,h3,h4,p,button,input,select,textarea,label,.photo-layout-head h1,.photo-section-head h2,.delivery-view-head h1,.route-stop h2{font-family:inherit}
+
+/* Proporce ikon a popisků přesně podle mobilního navigačního vzoru. */
+.fitness-bottom-nav button{font-size:8px;font-weight:600;letter-spacing:-.12px;overflow:visible}
+.fitness-nav-icon{width:20px;height:20px;margin:0 0 1px}
+.fitness-nav-icon svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
