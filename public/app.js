@@ -40,7 +40,7 @@ document.addEventListener('click',async event=>{const b=event.target.closest('bu
  if(b.dataset.date||b.dataset.shift){if(!canLeave())return;state.date=b.dataset.date||plus(state.date,Number(b.dataset.shift));await render();}
  if(b.dataset.filter){state.filter=b.dataset.filter;$('#content').innerHTML=menuView();}
  if(b.dataset.qty){const id=Number(b.dataset.qty),q=Math.max(0,Math.min(500,(state.quantities[id]||0)+Number(b.dataset.delta)));state.quantities[id]=q;state.dirty=true;$('#content').innerHTML=menuView();}
- if(b.dataset.demo){b.disabled=true;await api('login',{email:b.dataset.demo==='admin'?'restaurace@demo.cz':'podkozi@demo.cz',password:'SrubDemo2026!'});await boot();}
+ if(b.dataset.demo){b.disabled=true;await api('login',{email:b.dataset.demo==='admin'?'restaurace@demo.cz':'fish@demo.cz',password:'SrubDemo2026!'});await boot();}
  if(b.dataset.editCompany)companyModal(Number(b.dataset.editCompany));
  if(b.dataset.removeCompany){const id=Number(b.dataset.removeCompany);const c=state.data.companies.find(x=>x.id===id);
   openModal(`<h2>Odebrat firmu</h2><p>Opravdu chcete odebrat firmu <strong>${esc(c.name)}</strong>? Přijde tím i o přihlášení do aplikace.</p><button class="primary full" data-confirm-remove="${id}">Ano, odebrat</button><button class="secondary full" data-action="close-modal">Zrušit</button>`);}

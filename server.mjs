@@ -53,9 +53,6 @@ if(!get('SELECT id FROM users LIMIT 1')){
  if(!demo && (!process.env.ADMIN_EMAIL||!process.env.ADMIN_PASSWORD))throw new Error('Nastavte ADMIN_EMAIL a ADMIN_PASSWORD nebo DEMO=true pro místní ukázku.');
  run('INSERT INTO users(email,password,role) VALUES(?,?,?)',demo?'restaurace@demo.cz':email(process.env.ADMIN_EMAIL),hash(demo?'SrubDemo2026!':password(process.env.ADMIN_PASSWORD)),'admin');
  if(demo){
-  // Zkušební firma, na kterou vede tlačítko „Pohled firmy“ na přihlašovací stránce.
-  const testId=run('INSERT INTO companies(name,email,address,price,price_m1,price_m2,price_m3,price_m4,soup_price,packaging,fee) VALUES(?,?,?,?,?,?,?,?,?,?,?)','Zkušební firma','podkozi@demo.cz','',null,10000,11000,12000,12000,5000,'disposable',1000).lastInsertRowid;
-  run('INSERT INTO users(email,password,role,company_id) VALUES(?,?,?,?)','podkozi@demo.cz',hash('SrubDemo2026!'),'company',testId);
   // Uložené dva týdny menu se posunou tak, aby druhý připadl na aktuální týden (o víkendu na příští).
   const now=pragueNow().date, weekday=new Date(now+'T12:00:00Z').getUTCDay();
   const monday=dayAfter(now,weekday===6?2:weekday===0?1:1-weekday);
@@ -93,11 +90,13 @@ if(demo){
   ["Ptice","ptice@demo.cz","",null,"own",0]
  ];
  transaction(()=>{
-  for(const f of demoFirms){
+  // Ukázkové firmy se zakládají jen jednou. Když firmě v aplikaci změníte e-mail,
+  // server ji jinak při dalším startu podle starého e-mailu založil znovu jako duplikát.
+  if(!setting('demoFirmsSeeded')){for(const f of demoFirms){
    if(get('SELECT id FROM companies WHERE email=?',f[1]))continue;
    const id=run('INSERT INTO companies(name,email,address,price,packaging,fee) VALUES(?,?,?,?,?,?)',...f).lastInsertRowid;
    run('INSERT INTO users(email,password,role,company_id) VALUES(?,?,?,?)',f[1],hash('SrubDemo2026!'),'company',id);
-  }
+  }set('demoFirmsSeeded','1');}
   // Ukázkové objednávky jen pro ukázkové firmy – firmy založené v aplikaci se generátor nesmí dotknout.
   // Ceny se počítají podle pořadí jídla (M1–M4), aby platily i sjednané ceny firmy.
   // Typ krabiček se nastavuje jen při založení firmy; přepisovat ho při každém startu by rušilo úpravy z aplikace.
