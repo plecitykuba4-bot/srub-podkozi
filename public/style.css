@@ -639,3 +639,6 @@ h1,h2,h3,h4,p,button,input,select,textarea,label,.photo-layout-head h1,.photo-se
 #modal.week-modal{max-width:920px}
 #modal .week-detail{margin-top:12px}
 #modal .week-detail .admin-orders-total{margin-top:14px}
+
+/* Křížek v okně s týdnem zůstává při rolování nahoře */
+#modal.week-modal .modal-close{position:sticky;top:0;float:right;z-index:3;margin:-6px -6px 0 10px;box-shadow:0 2px 8px rgb(35 31 24 / .12)}

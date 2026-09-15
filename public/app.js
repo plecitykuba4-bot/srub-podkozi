@@ -738,3 +738,12 @@ document.addEventListener('click',async e=>{
  const month=e.target.closest('[data-month-shift]');
  if(month){const d=new Date(state.date.slice(0,8)+'01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+Number(month.dataset.monthShift));state.date=d.toISOString().slice(0,10);await render();}
 });
+
+// Okno s týdnem se zavře i kliknutím mimo něj, ať není nutné rolovat zpátky ke křížku.
+// Jen u tohoto okna – formuláře by se kliknutím vedle zavřely i s rozepsanými údaji.
+$('#modal').addEventListener('click',e=>{
+ const dlg=e.currentTarget;
+ if(!dlg.classList.contains('week-modal')||e.target!==dlg)return;
+ const r=dlg.getBoundingClientRect();
+ if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dlg.close();
+});
