@@ -714,3 +714,7 @@ html{scrollbar-gutter:stable}
  .fitness-content:has(> .set-card)>*{margin:0!important}
  .fitness-content:has(> .set-card)>.simple-title{grid-column:1/-1;margin-bottom:4px!important}
 }
+
+/* Tlačítko pro rozbalení firem bez objednávky */
+.missing-toggle{display:block;width:100%;height:auto;min-height:44px;margin-top:8px;padding:10px 14px;border:1px dashed #e6cf9c;border-radius:10px;background:#fffdfa;color:#a96c00;font-size:14px;font-weight:700;cursor:pointer;box-shadow:none}
+.missing-toggle:hover{border-style:solid;border-color:#ffb000;background:#fff4dd}
