@@ -706,7 +706,7 @@ function monthWeeks(from,to){
 }
 adminOrders=function(){
  const d=state.data,company=d.company;
- const picker=`<div class="firm-picker">${d.companies.map(c=>`<button class="${company&&c.id===company.id?'selected':''}" data-firm="${c.id}"><span>${esc(c.name)}</span><small>${c.billing==='month'?'měsíčně':'týdně'}</small></button>`).join('')}</div>`;
+ const picker=`<div class="firm-picker">${[...d.companies].sort((x,y)=>(x.billing==='month'?0:1)-(y.billing==='month'?0:1)).map(c=>`<button class="${company&&c.id===company.id?'selected':''}" data-firm="${c.id}"><span>${esc(c.name)}</span><small>${c.billing==='month'?'měsíčně':'týdně'}</small></button>`).join('')}</div>`;
  const head=`<header class="delivery-view-head"><div><h1>Objednávky</h1><p>Vyberte firmu a uvidíte, co objednala a kolik to stojí.</p></div></header>`;
  if(!company)return `<section class="delivery-view company-summary firm-orders">${head}<p class="photo-empty">Zatím tu nejsou žádné firmy.</p></section>`;
  const sum=firmSum, portions=firmPortions, porce=firmPorce;

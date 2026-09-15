@@ -209,7 +209,7 @@ const server=http.createServer(async(req,res)=>{
   if(user.role!=='admin')return send(403,{error:'Tato část je dostupná pouze restauraci.'});
   if(path==='/api/firm-orders'&&req.method==='GET'){
    const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');
-   const companies=all('SELECT id,name,packaging,fee,billing,active FROM companies ORDER BY name');
+   const companies=all("SELECT id,name,packaging,fee,billing,active FROM companies ORDER BY billing='month' DESC,name");
    const company=companies.find(c=>c.id===Number(url.searchParams.get('company')))||companies[0]||null;
    if(!company)return send(200,{companies,company:null,rows:[],from:date,to:date});
    let from,to;
