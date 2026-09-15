@@ -664,3 +664,9 @@ h1,h2,h3,h4,p,button,input,select,textarea,label,.photo-layout-head h1,.photo-se
 html{scrollbar-gutter:stable}
 /* Široký kuchyňský list se posouvá uvnitř svého rámečku, stránka do strany nikdy */
 .ks-scroll{max-width:100%;overflow-x:auto!important}
+
+/* Levý panel sekcí drží při rolování na místě. Když je nahoře přepínač účtů,
+   panel se zastaví pod ním – jinak mu přepínač zakryl horní položky. */
+@media (min-width:1000px){
+ .dev-switcher + .fitness-shell .fitness-bottom-nav{top:49px!important;height:calc(100vh - 49px)!important}
+}
