@@ -37,6 +37,8 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  CREATE TABLE IF NOT EXISTS login_attempts(key TEXT PRIMARY KEY,count INTEGER NOT NULL,until INTEGER NOT NULL);
 `);
 for(const n of [1,2,3,4])addColumnIfMissing('companies',`price_m${n}`,'INTEGER');
+// Jak se firmě vyúčtovává: po týdnech, nebo za celý kalendářní měsíc.
+addColumnIfMissing('companies','billing',"TEXT NOT NULL DEFAULT 'week'");
 
 const all=(sql,...p)=>db.prepare(sql).all(...p), get=(sql,...p)=>db.prepare(sql).get(...p), run=(sql,...p)=>db.prepare(sql).run(...p);
 function hash(password){const salt=randomBytes(16).toString('hex');return salt+':'+scryptSync(password,salt,64).toString('hex');}
@@ -203,6 +205,17 @@ const server=http.createServer(async(req,res)=>{
    });return send(200,{ok:true});
   }
   if(user.role!=='admin')return send(403,{error:'Tato část je dostupná pouze restauraci.'});
+  if(path==='/api/firm-orders'&&req.method==='GET'){
+   const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');
+   const companies=all('SELECT id,name,packaging,fee,billing,active FROM companies ORDER BY name');
+   const company=companies.find(c=>c.id===Number(url.searchParams.get('company')))||companies[0]||null;
+   if(!company)return send(200,{companies,company:null,rows:[],from:date,to:date});
+   let from,to;
+   if(company.billing==='month'){from=date.slice(0,8)+'01';const end=new Date(from+'T12:00:00Z');end.setUTCMonth(end.getUTCMonth()+1);end.setUTCDate(0);to=end.toISOString().slice(0,10);}
+   else{const d=new Date(date+'T12:00:00Z');from=dayAfter(date,-((d.getUTCDay()+6)%7));to=dayAfter(from,4);}
+   const rows=all('SELECT o.quantity,o.price,o.fee,o.packaging,m.id meal_id,m.name,m.category,m.date FROM orders o JOIN meals m ON m.id=o.meal_id WHERE o.company_id=? AND m.date BETWEEN ? AND ? AND o.quantity>0 ORDER BY m.date,m.id',company.id,from,to);
+   return send(200,{companies,company,rows,from,to});
+  }
   if(path==='/api/dashboard'&&req.method==='GET'){const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');return send(200,{...summary(date),closed:closed(date),companies:all('SELECT * FROM companies ORDER BY name'),report:get('SELECT date,status,sent,error FROM reports WHERE date=?',date)||null});}
   if(path==='/api/menu/read'&&req.method==='POST'){
    if(!process.env.ANTHROPIC_API_KEY)throw new Error('Čtení lístku není nastavené. Doplňte ANTHROPIC_API_KEY do .env a restartujte server.');
@@ -265,6 +278,7 @@ const server=http.createServer(async(req,res)=>{
       run('UPDATE orders SET price=?,fee=?,packaging=? WHERE company_id=? AND meal_id=?',portionPrice(meal,firm),firm.fee,firm.packaging,body.id,meal.id);}if(body.password){run('UPDATE users SET password=? WHERE company_id=?',hash(password(body.password)),body.id);run('DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE company_id=?)',body.id);}}
     else{const h=hash(password(body.password));const id=run('INSERT INTO companies(name,email,address,price,price_m1,price_m2,price_m3,price_m4,soup_price,packaging,fee) VALUES(?,?,?,?,?,?,?,?,?,?,?)',c.name,c.email,c.address,c.price,c.price_m1,c.price_m2,c.price_m3,c.price_m4,c.soup_price,c.packaging,c.fee).lastInsertRowid;run('INSERT INTO users(email,password,role,company_id) VALUES(?,?,?,?)',c.email,h,'company',id);}
     run('UPDATE companies SET soup_price=? WHERE email=?',body.soup_price===''||body.soup_price==null?null:money(body.soup_price),c.email);
+    run('UPDATE companies SET billing=? WHERE email=?',body.billing==='month'?'month':'week',c.email);
     if(body.id&&body.active===false)run('DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE company_id=?)',body.id);
    });return send(200,{ok:true});
   }

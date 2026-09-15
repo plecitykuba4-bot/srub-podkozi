@@ -25,7 +25,7 @@ function history(){const rows=state.data.rows;const dates=[...new Set(rows.map(r
 function settings(){const admin=state.user.role==='admin';const d=state.data;return heading('ABY VŠE FUNGOVALO','Nastavení',admin?'Ranní přehledy a zabezpečení vašeho účtu.':'Přihlašovací údaje a vaše firemní nastavení.')+`<div class="settings-grid">${admin?`<section class="panel form-panel"><h2>Ranní souhrn e-mailem</h2><p>Každý den po 8:00. Konečné počty jídel a rozpis pro firmy.</p><form id="settings-form"><label>E-mail pro ranní souhrn<input type="email" name="reportEmail" placeholder="provoz@vase-restaurace.cz" value="${esc(d.reportEmail)}"></label><div class="notice compact"><span>ⓘ</span><p>${d.emailReady?'E-mailová služba je nakonfigurována.':state.demo?'V místním demu se e-maily neposílají. Souhrny si můžete stáhnout v denním přehledu.':'Pro odesílání je potřeba připojit e-mailovou službu na serveru.'}</p></div><button class="primary">Uložit nastavení</button></form></section>`:`<section class="panel form-panel"><h2>${esc(state.user.name)}</h2><p>${esc(state.user.email)}</p><div class="notice compact"><p>Cenu a typ krabiček vám nastavuje restaurace. Pokud potřebujete změnu, obraťte se na obsluhu Srubu Podkozí.</p></div></section>`}<section class="panel form-panel"><h2>Změna hesla</h2><p>Pro bezpečné přihlášení používejte vlastní heslo.</p><form id="password-form"><label>Současné heslo<input name="current" type="password" required autocomplete="current-password" maxlength="128"></label><label>Nové heslo<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password" placeholder="Alespoň 12 znaků"></label><label>Nové heslo znovu<input name="confirm" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label><button class="secondary">Změnit heslo</button></form></section></div>`;}
 function login(){return `<div class="login-layout"><section class="login-story">${brand()}<div><span class="eyebrow">FIREMNÍ STRAVOVÁNÍ OD SRUBU</span><h1>Dobrý oběd.<br>Každý pracovní den.</h1><p>Poctivá kuchyně z Podkozí.<br>Pro vás a celý váš tým.</p><div class="story-lines">↟ &nbsp; Čerstvě uvařeno &nbsp; · &nbsp; S chutí doručeno</div></div><small>SRUB PODKOZÍ · RODINNÁ RESTAURACE</small></section><section class="login-form"><div class="login-inner"><p class="eyebrow">VÍTEJTE U NÁS</p><h2>Váš oběd začíná tady.</h2><p>Přihlaste se do svého firemního účtu<br>nebo do správy restaurace.</p><form id="login-form"><label>E-mail<input type="email" name="email" placeholder="vas@email.cz" required autocomplete="username"></label><label>Heslo<input type="password" name="password" placeholder="Vaše heslo" required autocomplete="current-password" maxlength="128"></label><button class="primary full">Přihlásit se <span>→</span></button><p class="form-error" role="alert"></p></form>${state.demo?'<div class="demo-box"><span>MÍSTNÍ UKÁZKA APLIKACE</span><p>Prohlédněte si obě strany jednoho oběda.</p><div><button class="secondary" data-demo="company">Vstoupit jako firma →</button><button class="secondary" data-demo="admin">Správa restaurace →</button></div><small>Ukázkové účty a objednávky. E-maily se neodesílají.</small></div>':'<p class="muted">Nemáte přístup nebo jste zapomněli heslo? Obraťte se na správce restaurace.</p>'}<a class="back-site" href="https://www.srubpodkozi.cz/" target="_blank" rel="noreferrer">← Web restaurace Srub Podkozí</a></div></section></div>`;}
 }
-async function render(){const id=++renderId;try{if(!state.user){$('#app').innerHTML=login();return;}const v=state.view;let data;if(v==='menu')data=await api('menu?date='+state.date);if((v==='dashboard'||v==='delivery')&&state.user.role==='company')data=await api('history');else if(v==='dashboard'||v==='companies'||v==='delivery')data=await api('dashboard?date='+state.date);if(v==='orders')data=state.user.role==='admin'?await api('dashboard?date='+state.date):await api('history');if(v==='kitchen')data=await api('dashboard?date='+state.date);if(v==='settings')data=state.user.role==='admin'?await api('settings'):{};if(id!==renderId)return;state.data=data;if(v==='menu'){state.quantities=Object.fromEntries(data.orders.map(o=>[o.meal_id,o.quantity]));state.dirty=false;}$('#app').innerHTML=shell(({menu:menuView,dashboard:(state.user.role==='admin'?dashboard:companyOverview),companies,orders:(state.user.role==='admin'?adminOrders:history),kitchen:kitchenSheet,delivery:(state.user.role==='admin'?(globalThis.delivery||dashboard):companyDelivery),settings}[v])());}catch(e){toast(e.message,true);}}
+async function render(){const id=++renderId;try{if(!state.user){$('#app').innerHTML=login();return;}const v=state.view;let data;if(v==='menu')data=await api('menu?date='+state.date);if((v==='dashboard'||v==='delivery')&&state.user.role==='company')data=await api('history');else if(v==='dashboard'||v==='companies'||v==='delivery')data=await api('dashboard?date='+state.date);if(v==='orders')data=state.user.role==='admin'?await api(`firm-orders?company=${state.firm||''}&date=${state.date}`):await api('history');if(v==='kitchen')data=await api('dashboard?date='+state.date);if(v==='settings')data=state.user.role==='admin'?await api('settings'):{};if(id!==renderId)return;state.data=data;if(v==='orders'&&state.user.role==='admin')state.firm=data.company?.id;if(v==='menu'){state.quantities=Object.fromEntries(data.orders.map(o=>[o.meal_id,o.quantity]));state.dirty=false;}$('#app').innerHTML=shell(({menu:menuView,dashboard:(state.user.role==='admin'?dashboard:companyOverview),companies,orders:(state.user.role==='admin'?adminOrders:history),kitchen:kitchenSheet,delivery:(state.user.role==='admin'?(globalThis.delivery||dashboard):companyDelivery),settings}[v])());}catch(e){toast(e.message,true);}}
 function canLeave(){return !state.dirty||confirm('Máte neuložené změny objednávky. Opravdu chcete odejít bez uložení?');}
 function openModal(html){const d=$('#modal');d.innerHTML=`<button class="modal-close" aria-label="Zavřít" data-action="close-modal">×</button>${html}<p class="form-error" role="alert"></p>`;d.showModal();}
 function input(label,name,value='',type='text',extra=''){return `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;}
@@ -415,6 +415,10 @@ companyModal=function(id){
   ${input('Příplatek za krabičku (Kč)','fee',(id?(c.fee||0):1000)/100,'number','min="0" max="10000" step="1"')}</div>
  </fieldset>
 
+ <fieldset class="form-group"><legend>Vyúčtování</legend>
+  ${choice('Jak se firmě účtuje','billing',[['week','Týdně'],['month','Měsíčně']],c.billing==='month'?'month':'week')}
+  <p class="footnote">Měsíčně: v Objednávkách se firma ukáže po týdnech za celý kalendářní měsíc.</p>
+ </fieldset>
  ${id?`<label class="checkbox"><input name="active" type="checkbox" ${c.active?'checked':''}>Účet firmy je aktivní</label>`:''}
  <button class="primary full">${id?'Uložit firmu':'Vytvořit firemní účet'}</button></form>`);
 };
@@ -682,3 +686,43 @@ function boxFee(order,company){
  const fee=order?order.fee:(company?.packaging==='disposable'?company.fee:0);
  return fee>0?fee:0;
 }
+
+
+// Objednávky restaurace: nahoře výběr firmy, pod ním její objednávky a ceny.
+// Týdenní firmy vidí po–pá jídlo po jídle, měsíční firmy součty po týdnech za celý měsíc.
+adminOrders=function(){
+ const d=state.data,company=d.company;
+ const picker=`<div class="firm-picker">${d.companies.map(c=>`<button class="${company&&c.id===company.id?'selected':''}" data-firm="${c.id}"><span>${esc(c.name)}</span><small>${c.billing==='month'?'měsíčně':'týdně'}</small></button>`).join('')}</div>`;
+ const head=`<header class="delivery-view-head"><div><h1>Objednávky</h1><p>Vyberte firmu a uvidíte, co objednala a kolik to stojí.</p></div></header>`;
+ if(!company)return `<section class="delivery-view company-summary firm-orders">${head}<p class="photo-empty">Zatím tu nejsou žádné firmy.</p></section>`;
+ const cost=r=>r.quantity*(r.price+r.fee);
+ const sum=rows=>rows.reduce((s,r)=>s+cost(r),0), portions=rows=>rows.reduce((s,r)=>s+r.quantity,0);
+ const porce=n=>`${n} ${plural(n,'porce','porce','porcí')}`;
+ const title=`<div class="firm-title"><h2>${esc(company.name)}</h2><span>${company.packaging==='own'?'vlastní krabičky':'jednorázové krabičky'} · vyúčtování ${company.billing==='month'?'měsíčně':'týdně'}</span></div>`;
+ if(company.billing==='month'){
+  const weeks=[];
+  for(let date=d.from;date<=d.to;date=plus(date,1)){
+   const wd=new Date(date+'T12:00:00Z').getUTCDay();if(wd===0||wd===6)continue;
+   const monday=plus(date,-((wd+6)%7));let w=weeks.find(x=>x.monday===monday);
+   if(!w){w={monday,days:[]};weeks.push(w);}w.days.push(date);
+  }
+  const month=dateLabel(d.from,{month:'long',year:'numeric'});
+  const tiles=weeks.map((w,i)=>{const rows=d.rows.filter(r=>w.days.includes(r.date)),first=w.days[0],last=w.days.at(-1);
+   return `<article class="${rows.length?'has-order':''}"><span class="week-label">${i+1}. týden</span><span class="week-range">${dateLabel(first,{day:'numeric',month:'numeric'})}${first===last?'':' – '+dateLabel(last,{day:'numeric',month:'numeric'})}</span><strong>${money(sum(rows))}</strong><small>${porce(portions(rows))}</small></article>`;}).join('');
+  return `<section class="delivery-view company-summary firm-orders">${head}${picker}${title}
+   <div class="simple-week"><div class="week-switch"><button class="secondary" data-month-shift="-1">←</button><strong>${month.charAt(0).toUpperCase()+month.slice(1)}</strong><button class="secondary" data-month-shift="1">→</button></div></div>
+   <div class="month-weeks">${tiles}</div>
+   <footer class="admin-orders-total"><span>Celkem za měsíc<small>${porce(portions(d.rows))} dohromady</small></span><strong>${money(sum(d.rows))}</strong></footer></section>`;
+ }
+ const days=Array.from({length:5},(_,i)=>plus(d.from,i)).map((date,i)=>{const rows=d.rows.filter(r=>r.date===date);
+  return `<article class="route-stop ${rows.length?'has-order':''}"><span class="route-number">${i+1}</span><div class="route-stop-main"><div class="stop-head"><h2>${dateLabel(date,{weekday:'long',day:'numeric',month:'long'})}</h2></div>${rows.length?`<div class="route-meals">${rows.map(r=>`<span><b>${r.quantity}×</b><em>${esc(r.name)}</em><i>${money(cost(r))}</i></span>`).join('')}</div><div class="stop-total"><span class="stop-count">${porce(portions(rows))}</span><span class="stop-sum">Celkem<b>${money(sum(rows))}</b></span></div>`:'<p>Bez objednávky.</p>'}</div></article>`;}).join('');
+ return `<section class="delivery-view company-summary firm-orders">${head}${picker}${title}${simpleWeek(false)}<div class="delivery-route">${days}</div>
+  <footer class="admin-orders-total"><span>Celkem za týden<small>${porce(portions(d.rows))} dohromady</small></span><strong>${money(sum(d.rows))}</strong></footer></section>`;
+};
+
+document.addEventListener('click',async e=>{
+ const firm=e.target.closest('[data-firm]');
+ if(firm){state.firm=Number(firm.dataset.firm);await render();return;}
+ const month=e.target.closest('[data-month-shift]');
+ if(month){const d=new Date(state.date.slice(0,8)+'01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+Number(month.dataset.monthShift));state.date=d.toISOString().slice(0,10);await render();}
+});
