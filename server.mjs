@@ -98,7 +98,7 @@ if(demo){
    if(get('SELECT id FROM companies WHERE email=?',f[1]))continue;
    const id=run('INSERT INTO companies(name,email,address,price,packaging,fee) VALUES(?,?,?,?,?,?)',...f).lastInsertRowid;
    run('INSERT INTO users(email,password,role,company_id) VALUES(?,?,?,?)',f[1],hash('SrubDemo2026!'),'company',id);
-  }set('demoFirmsSeeded','1');}
+  }
   // Ukázkové objednávky jen pro ukázkové firmy – firmy založené v aplikaci se generátor nesmí dotknout.
   // Ceny se počítají podle pořadí jídla (M1–M4), aby platily i sjednané ceny firmy.
   // Typ krabiček se nastavuje jen při založení firmy; přepisovat ho při každém startu by rušilo úpravy z aplikace.
@@ -109,6 +109,8 @@ if(demo){
     const q=(meal.id*3+c.id*2)%6+1;
     run('INSERT OR IGNORE INTO orders VALUES(?,?,?,?,?,?,?)',c.id,meal.id,q,portionPrice(meal,c),c.fee,c.packaging,new Date().toISOString());
    }
+  // Ukázkové objednávky vzniknou jen jednou – jinak by se po každém startu vrátily i ty, které restaurace zrušila.
+  set('demoFirmsSeeded','1');}
  });
 }
 function session(req){const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('srub_session='))?.slice(13);if(!raw)return null;const token=createHash('sha256').update(raw).digest('hex');return get(`SELECT u.id,u.email,u.role,u.company_id,COALESCE(c.name,'Restaurace Srub Podkozí') name FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN companies c ON c.id=u.company_id WHERE s.token=? AND s.expires>? AND (u.role='admin' OR c.active=1)`,token,Date.now());}
