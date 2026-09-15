@@ -629,3 +629,13 @@ h1,h2,h3,h4,p,button,input,select,textarea,label,.photo-layout-head h1,.photo-se
 .month-weeks .week-range{color:#776b58;font-size:13px;font-weight:600}
 .month-weeks strong{margin-top:6px;color:#231f18;font-size:22px;font-weight:800;letter-spacing:-.4px}
 .month-weeks small{color:#776b58;font-size:12px;font-weight:600}
+
+/* Týdny měsíční firmy jsou klikací a otevřou okno se dny jako u týdenních firem */
+.month-weeks .month-week{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;height:auto;min-height:0;padding:14px;border:1px solid #eee2cf;border-radius:14px;background:#fff;color:#231f18;text-align:left;box-shadow:none;cursor:pointer;font:inherit}
+.month-weeks .month-week.has-order{border-color:#f1d795;background:#fffaf0;box-shadow:inset 3px 0 0 #ffb000}
+.month-weeks .month-week:hover{border-color:#ffb000;background:#fff4dd}
+.month-weeks .month-week:focus-visible{outline:3px solid #ffd98a;outline-offset:2px}
+.month-weeks .week-open{margin-top:8px;color:#a96c00;font-size:12px;font-weight:700}
+#modal.week-modal{max-width:920px}
+#modal .week-detail{margin-top:12px}
+#modal .week-detail .admin-orders-total{margin-top:14px}

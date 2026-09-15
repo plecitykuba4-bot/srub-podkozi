@@ -690,39 +690,51 @@ function boxFee(order,company){
 
 // Objednávky restaurace: nahoře výběr firmy, pod ním její objednávky a ceny.
 // Týdenní firmy vidí po–pá jídlo po jídle, měsíční firmy součty po týdnech za celý měsíc.
+const firmCost=r=>r.quantity*(r.price+r.fee);
+const firmSum=rows=>rows.reduce((s,r)=>s+firmCost(r),0), firmPortions=rows=>rows.reduce((s,r)=>s+r.quantity,0);
+const firmPorce=n=>`${n} ${plural(n,'porce','porce','porcí')}`;
+function firmDays(dates,rows){
+ return `<div class="delivery-route">${dates.map((date,i)=>{const day=rows.filter(r=>r.date===date);
+  return `<article class="route-stop ${day.length?'has-order':''}"><span class="route-number">${i+1}</span><div class="route-stop-main"><div class="stop-head"><h2>${dateLabel(date,{weekday:'long',day:'numeric',month:'long'})}</h2></div>${day.length?`<div class="route-meals">${day.map(r=>`<span><b>${r.quantity}×</b><em>${esc(r.name)}</em><i>${money(firmCost(r))}</i></span>`).join('')}</div><div class="stop-total"><span class="stop-count">${firmPorce(firmPortions(day))}</span><span class="stop-sum">Celkem<b>${money(firmSum(day))}</b></span></div>`:'<p>Bez objednávky.</p>'}</div></article>`;}).join('')}</div>`;
+}
+// Týdny měsíce: jen pracovní dny, které do měsíce patří.
+function monthWeeks(from,to){
+ const weeks=[];
+ for(let date=from;date<=to;date=plus(date,1)){const wd=new Date(date+'T12:00:00Z').getUTCDay();if(wd===0||wd===6)continue;
+  const monday=plus(date,-((wd+6)%7));let w=weeks.find(x=>x.monday===monday);if(!w){w={monday,days:[]};weeks.push(w);}w.days.push(date);}
+ return weeks;
+}
 adminOrders=function(){
  const d=state.data,company=d.company;
  const picker=`<div class="firm-picker">${d.companies.map(c=>`<button class="${company&&c.id===company.id?'selected':''}" data-firm="${c.id}"><span>${esc(c.name)}</span><small>${c.billing==='month'?'měsíčně':'týdně'}</small></button>`).join('')}</div>`;
  const head=`<header class="delivery-view-head"><div><h1>Objednávky</h1><p>Vyberte firmu a uvidíte, co objednala a kolik to stojí.</p></div></header>`;
  if(!company)return `<section class="delivery-view company-summary firm-orders">${head}<p class="photo-empty">Zatím tu nejsou žádné firmy.</p></section>`;
- const cost=r=>r.quantity*(r.price+r.fee);
- const sum=rows=>rows.reduce((s,r)=>s+cost(r),0), portions=rows=>rows.reduce((s,r)=>s+r.quantity,0);
- const porce=n=>`${n} ${plural(n,'porce','porce','porcí')}`;
+ const sum=firmSum, portions=firmPortions, porce=firmPorce;
  const title=`<div class="firm-title"><h2>${esc(company.name)}</h2><span>${company.packaging==='own'?'vlastní krabičky':'jednorázové krabičky'} · vyúčtování ${company.billing==='month'?'měsíčně':'týdně'}</span></div>`;
  if(company.billing==='month'){
-  const weeks=[];
-  for(let date=d.from;date<=d.to;date=plus(date,1)){
-   const wd=new Date(date+'T12:00:00Z').getUTCDay();if(wd===0||wd===6)continue;
-   const monday=plus(date,-((wd+6)%7));let w=weeks.find(x=>x.monday===monday);
-   if(!w){w={monday,days:[]};weeks.push(w);}w.days.push(date);
-  }
+  const weeks=monthWeeks(d.from,d.to);
   const month=dateLabel(d.from,{month:'long',year:'numeric'});
   const tiles=weeks.map((w,i)=>{const rows=d.rows.filter(r=>w.days.includes(r.date)),first=w.days[0],last=w.days.at(-1);
-   return `<article class="${rows.length?'has-order':''}"><span class="week-label">${i+1}. týden</span><span class="week-range">${dateLabel(first,{day:'numeric',month:'numeric'})}${first===last?'':' – '+dateLabel(last,{day:'numeric',month:'numeric'})}</span><strong>${money(sum(rows))}</strong><small>${porce(portions(rows))}</small></article>`;}).join('');
+   return `<button type="button" class="month-week ${rows.length?'has-order':''}" data-month-week="${i}"><span class="week-label">${i+1}. týden</span><span class="week-range">${dateLabel(first,{day:'numeric',month:'numeric'})}${first===last?'':' – '+dateLabel(last,{day:'numeric',month:'numeric'})}</span><strong>${money(sum(rows))}</strong><small>${porce(portions(rows))}</small><span class="week-open">Zobrazit týden →</span></button>`;}).join('');
   return `<section class="delivery-view company-summary firm-orders">${head}${picker}${title}
    <div class="simple-week"><div class="week-switch"><button class="secondary" data-month-shift="-1">←</button><strong>${month.charAt(0).toUpperCase()+month.slice(1)}</strong><button class="secondary" data-month-shift="1">→</button></div></div>
    <div class="month-weeks">${tiles}</div>
    <footer class="admin-orders-total"><span>Celkem za měsíc<small>${porce(portions(d.rows))} dohromady</small></span><strong>${money(sum(d.rows))}</strong></footer></section>`;
  }
- const days=Array.from({length:5},(_,i)=>plus(d.from,i)).map((date,i)=>{const rows=d.rows.filter(r=>r.date===date);
-  return `<article class="route-stop ${rows.length?'has-order':''}"><span class="route-number">${i+1}</span><div class="route-stop-main"><div class="stop-head"><h2>${dateLabel(date,{weekday:'long',day:'numeric',month:'long'})}</h2></div>${rows.length?`<div class="route-meals">${rows.map(r=>`<span><b>${r.quantity}×</b><em>${esc(r.name)}</em><i>${money(cost(r))}</i></span>`).join('')}</div><div class="stop-total"><span class="stop-count">${porce(portions(rows))}</span><span class="stop-sum">Celkem<b>${money(sum(rows))}</b></span></div>`:'<p>Bez objednávky.</p>'}</div></article>`;}).join('');
- return `<section class="delivery-view company-summary firm-orders">${head}${picker}${title}${simpleWeek(false)}<div class="delivery-route">${days}</div>
+ const days=firmDays(Array.from({length:5},(_,i)=>plus(d.from,i)),d.rows);
+ return `<section class="delivery-view company-summary firm-orders">${head}${picker}${title}${simpleWeek(false)}${days}
   <footer class="admin-orders-total"><span>Celkem za týden<small>${porce(portions(d.rows))} dohromady</small></span><strong>${money(sum(d.rows))}</strong></footer></section>`;
 };
 
 document.addEventListener('click',async e=>{
  const firm=e.target.closest('[data-firm]');
  if(firm){state.firm=Number(firm.dataset.firm);await render();return;}
+ const week=e.target.closest('[data-month-week]');
+ if(week){const d=state.data,w=monthWeeks(d.from,d.to)[Number(week.dataset.monthWeek)];if(!w)return;
+  const rows=d.rows.filter(r=>w.days.includes(r.date)),first=w.days[0],last=w.days.at(-1);
+  openModal(`<p class="eyebrow">${esc(d.company.name)} · ${Number(week.dataset.monthWeek)+1}. týden</p><h2>${dateLabel(first,{day:'numeric',month:'numeric'})}${first===last?'':' – '+dateLabel(last,{day:'numeric',month:'numeric'})} ${first.slice(0,4)}</h2>
+   <div class="company-summary firm-orders week-detail">${firmDays(w.days,rows)}<footer class="admin-orders-total"><span>Celkem za týden<small>${firmPorce(firmPortions(rows))} dohromady</small></span><strong>${money(firmSum(rows))}</strong></footer></div>`);
+  const dlg=$('#modal');dlg.classList.add('week-modal');dlg.addEventListener('close',()=>dlg.classList.remove('week-modal'),{once:true});return;}
  const month=e.target.closest('[data-month-shift]');
  if(month){const d=new Date(state.date.slice(0,8)+'01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+Number(month.dataset.monthShift));state.date=d.toISOString().slice(0,10);await render();}
 });
