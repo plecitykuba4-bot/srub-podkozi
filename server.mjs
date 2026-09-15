@@ -76,10 +76,11 @@ if(demo){
   ["Chára","chara@demo.cz","",null,"disposable",1000],
   ["Hyundai","hyundai@demo.cz","",null,"disposable",1000],
   ["Autosklo","autosklo@demo.cz","",null,"disposable",1000],
-  ["Nevecom","nevecom@demo.cz","",null,"disposable",1000],
+  ["Nevecom","nevecom@demo.cz","",null,"own",0],
   ["Vít","vit@demo.cz","",null,"disposable",1000],
   ["Otec","otec@demo.cz","",null,"disposable",1000],
-  ["Barcal","barcal@demo.cz","",null,"own",0],
+  ["Barcalbus","barcal@demo.cz","",null,"own",0],
+  ["Movianto Jeneč","movianto@demo.cz","",null,"disposable",1000],
   ["Káča","kaca@demo.cz","",null,"own",0],
   ["OÚ Ptice","ou-ptice@demo.cz","",null,"own",0],
   ["Hlava","hlava@demo.cz","",null,"own",0],
@@ -99,6 +100,16 @@ if(demo){
    const id=run('INSERT INTO companies(name,email,address,price,packaging,fee) VALUES(?,?,?,?,?,?)',...f).lastInsertRowid;
    run('INSERT INTO users(email,password,role,company_id) VALUES(?,?,?,?)',f[1],hash('SrubDemo2026!'),'company',id);
   }
+  // Sjednané ceny (v haléřích) a vyúčtování, ať ukázka odpovídá skutečnému nastavení restaurace.
+  const agreed=[
+   ['hyundai@demo.cz',4000,[15000,15000,15000,17000],'week'],
+   ['movianto@demo.cz',4000,[15000,15000,15000,17000],'week'],
+   ['kaca@demo.cz',4000,[15000,15000,15000,17000],'week'],
+   ['jrk-firm@demo.cz',4000,[15000,15000,15000,17000],'week'],
+   ['barcal@demo.cz',0,[16500,16500,16500,16500],'month'],
+   ['nevecom@demo.cz',4000,[16000,16000,16000,16000],'month']
+  ];
+  for(const [mail,soup,m,billing] of agreed)run('UPDATE companies SET soup_price=?,price_m1=?,price_m2=?,price_m3=?,price_m4=?,billing=? WHERE email=?',soup,...m,billing,mail);
   // Ukázkové objednávky jen pro ukázkové firmy – firmy založené v aplikaci se generátor nesmí dotknout.
   // Ceny se počítají podle pořadí jídla (M1–M4), aby platily i sjednané ceny firmy.
   // Typ krabiček se nastavuje jen při založení firmy; přepisovat ho při každém startu by rušilo úpravy z aplikace.
