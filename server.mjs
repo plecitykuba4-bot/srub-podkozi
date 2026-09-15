@@ -110,6 +110,11 @@ if(demo){
    ['nevecom@demo.cz',4000,[16000,16000,16000,16000],'month']
   ];
   for(const [mail,soup,m,billing] of agreed)run('UPDATE companies SET soup_price=?,price_m1=?,price_m2=?,price_m3=?,price_m4=?,billing=? WHERE email=?',soup,...m,billing,mail);
+  // Firma ZKOUŠKA na interní vyzkoušení: ceny podle lístku, bez vymyšlených objednávek.
+  if(!get('SELECT id FROM companies WHERE email=?','zkouska@demo.cz')){
+   const testId=run('INSERT INTO companies(name,email,address,price,packaging,fee) VALUES(?,?,?,?,?,?)','ZKOUŠKA','zkouska@demo.cz','',null,'disposable',1000).lastInsertRowid;
+   run('INSERT INTO users(email,password,role,company_id) VALUES(?,?,?,?)','zkouska@demo.cz',hash('SrubDemo2026!'),'company',testId);
+  }
   // Ukázkové objednávky jen pro ukázkové firmy – firmy založené v aplikaci se generátor nesmí dotknout.
   // Ceny se počítají podle pořadí jídla (M1–M4), aby platily i sjednané ceny firmy.
   // Typ krabiček se nastavuje jen při založení firmy; přepisovat ho při každém startu by rušilo úpravy z aplikace.
