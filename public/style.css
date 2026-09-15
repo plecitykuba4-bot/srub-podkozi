@@ -179,3 +179,411 @@ h1,h2,h3,h4,p,button,input,select,textarea,label,.photo-layout-head h1,.photo-se
 .admin-orders-route .route-stop h2 small{color:#a96c00;font-size:12px}.admin-orders-route .admin-meal-totals{margin-top:20px}
 .simple-days button{min-height:80px}.simple-days button span{font-size:14px;font-weight:750}.simple-days button b{font-size:17px}.week-switch .secondary{width:54px;min-height:54px;font-size:24px}.admin-orders-route .simple-week{margin:0 0 20px}
 .admin-order-list h2 small{color:#a96c00;font-size:12px}.admin-meal-totals>div{display:grid;gap:0}.admin-meal-totals article,.admin-meal-totals .meal-total-head{display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;gap:8px;align-items:center;padding:10px 0;border-top:1px solid #eadfc9}.admin-meal-totals .meal-total-head{padding:0 0 7px;border:0;color:#776b58;font-size:12px;font-weight:800}.admin-meal-totals .meal-total-head b{text-align:right}.admin-meal-totals strong{font-size:16px;text-align:right;color:#a96c00}
+
+/* Klientské Objednávky ve stejném provedení jako pohled restaurace */
+.company-summary .route-stop{align-items:flex-start}
+.company-summary .route-stop.has-order{border-color:#f1d795;background:#fffaf0}
+.company-summary .route-meals span{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.company-summary .route-meals span i{flex:none;color:#231f18;font-style:normal;font-weight:800;white-space:nowrap}
+.company-summary .route-meals b{flex:none;margin-right:6px}
+.company-summary .route-stop-main>button{margin-top:11px}
+.company-summary .route-stop-main>p{margin:6px 0 0;color:#776b58;font-size:13px;line-height:1.45}
+.company-summary .route-stop>strong small{color:#776b58;font-size:11px;font-weight:650}
+
+/* Jídelníček: čitelnější odlišení jídel */
+.simple-meal .meal-type{background:#fff3d5;color:#a96c00;border-radius:999px;padding:4px 9px;margin-bottom:8px}
+.simple-meal.is-ordered{border-color:#f1d795;background:#fffaf0;box-shadow:inset 3px 0 0 #ffb000}
+.simple-meal.is-ordered .meal-type{background:#ffe6ab}
+.simple-meal h3{color:#231f18;font-weight:800}
+.simple-meal-action>strong{color:#231f18;font-size:21px;font-weight:900;letter-spacing:-.4px}
+.simple-meal .ordered-label{display:inline-block;background:#ffb000;color:#231f18;border-radius:999px;padding:3px 10px}
+.company-summary .route-stop h2{text-transform:capitalize}
+.company-summary .route-stop h2 small{text-transform:none}
+.company-summary .route-meals span em{flex:1;min-width:0;font-style:normal;text-align:left}
+/* Součtový pruh je <footer>, nesmí ho schovat globální "footer span{display:none}" na mobilu */
+.admin-orders-total span{display:block}
+
+/* ---- Sjednocení klienta a restaurace ---- */
+/* Oranžový 3D pruh na kartách dnů/firem u obou rolí */
+.admin-orders-route .route-stop,
+.company-summary .route-stop.has-order{border-color:#f1d795;background:#fffaf0;box-shadow:inset 3px 0 0 #ffb000}
+.company-summary .route-stop{background:var(--fitness-surface)}
+.company-summary .route-stop.has-order{background:#fffaf0}
+
+/* Kategorie jako štítek i v jídelníčku restaurace */
+.meal-card .meal-category,.simple-meal .meal-type{background:#fff3d5;color:#a96c00;border-radius:999px;padding:4px 9px}
+
+/* Jednotná váha tučného písma podle tabulky "Připravit do kuchyně" (700) */
+.simple-title h1,.fitness-content .heading h1{font-weight:700}
+.company-overview-card span,.company-overview-card strong,
+.company-overview-list span,.company-overview-list strong,
+.company-overview-list h2{font-weight:700}
+.simple-meal h3,.simple-meal .meal-type,.simple-meal .ordered-label{font-weight:700}
+.route-stop h2,.route-stop>strong,.delivery-view-note p{font-weight:700}
+.admin-orders-total span,.admin-orders-total strong{font-weight:700}
+.route-number,.delivery-view-note>span,.admin-order-index,
+.simple-meal-action>strong,.company-overview-list b{font-weight:800}
+/* Podtitul u klienta je věta, ne datum – nesmí ho chytit capitalize pro datum */
+.company-summary .delivery-view-head p{text-transform:none}
+/* Štítek kategorie musí být pilulka na šířku textu, ne pruh přes celou kartu */
+.meal-card .meal-category,.simple-meal .meal-type{display:inline-block;width:fit-content;max-width:100%;justify-self:start;align-self:start}
+/* Segoe UI má jen jeden tučný řez – "tlustost" v přehledu dělá velikost a stažené prostrkání */
+.company-overview-card strong{font-size:34px;letter-spacing:-.5px}
+.company-overview-card strong small{font-size:15px}
+.simple-title h1,.fitness-content .heading h1{letter-spacing:-.3px}
+.delivery-view-note>span{font-size:20px;letter-spacing:-.3px}
+/* Stejné doladění velkého čísla i v přehledu restaurace */
+.photo-total strong{font-size:34px;letter-spacing:-.5px}
+.photo-total strong small{font-size:15px}
+
+/* Akční řádek nad týdnem (import/přidat jídlo, datum, stažení souhrnu) */
+.simple-actions{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:0 0 16px}
+.simple-actions .secondary,.simple-actions .primary{min-height:40px;padding:9px 15px;font-size:13px}
+.overview-date{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--fitness-line);border-radius:10px;background:var(--fitness-surface);color:#776b58;font-size:12px;font-weight:700}
+.overview-date input{width:auto;min-height:32px;padding:4px 6px;border:0;background:transparent;font-size:13px;font-weight:700;color:#231f18}
+.overview-more{margin-top:12px;width:100%}
+
+/* 3D pruh i na kartách jídelníčku restaurace */
+.simple-meals.admin-menu .simple-meal{border-color:#f1d795;background:#fffaf0;box-shadow:inset 3px 0 0 #ffb000}
+
+/* Stavové řádky na Přehledu (obě role) */
+.state-list{margin-top:22px}
+.state-list h2{margin:0 0 9px;font-size:19px;font-weight:700}
+.state-row{display:flex;align-items:center;gap:12px;padding:13px 3px;border-bottom:1px solid #eee2cf}
+.state-row:last-child{border-bottom:0}
+.state-row b{display:grid;place-items:center;flex:0 0 31px;width:31px;height:31px;border-radius:9px;background:#fff0c9;color:#a96c00;font-size:13px;font-weight:800}
+.state-row span{flex:1;min-width:0;color:#231f18;font-size:15px;font-weight:700}
+.state-row strong{color:#776b58;font-size:13px;font-weight:700;text-align:right;white-space:nowrap}
+.state-row.is-open b{background:#e6f4d4;color:#5f8500}
+.state-row.is-open strong{color:#5f8500}
+.state-row.is-warn b{background:#ffe0d0;color:#b4501a}
+.state-row.is-warn strong{color:#b4501a}
+.state-row.is-locked b{background:#ece7de;color:#776b58}
+/* Patka Přehledu: hlavní akce + nenápadné stažení souhrnu */
+.overview-foot{margin-top:14px;display:grid;gap:8px;justify-items:center}
+.overview-foot .overview-more{margin-top:0}
+.overview-foot .text-button{color:#a96c00;font-size:13px;font-weight:700;background:transparent;padding:6px 4px}
+
+/* Upravit: kompaktní tlačítko zaražené do pravého dolního rohu karty */
+.simple-meals.admin-menu .simple-meal-action{align-self:stretch;justify-content:space-between;align-items:flex-end;min-width:96px}
+.simple-meals.admin-menu .simple-meal-action>button{width:auto;min-width:0;height:34px;min-height:34px;padding:0 14px;border-radius:8px;font-size:13px;font-weight:700}
+
+/* ---- Kompaktnější karty na obou účtech ---- */
+.simple-meals .simple-meal{min-height:0;padding:14px 15px;gap:10px}
+.simple-meals .simple-meal h3{font-size:17px;line-height:1.25;margin-bottom:0}
+.simple-meal .meal-meta{margin:5px 0 0;color:#776b58;font-size:13px;line-height:1.45}
+.simple-meal .meal-meta small{font-size:13px;color:#8a7d6a}
+.simple-meal .meal-meta span{margin:0 3px;color:#cbb794}
+.simple-meal .ordered-label{margin-top:8px}
+.simple-meals .simple-meal-action{align-self:stretch;justify-content:space-between;align-items:flex-end;min-width:92px}
+.simple-meals .simple-meal-action>strong{font-size:19px}
+.simple-meals .simple-meal-action>button{width:auto;min-width:0;height:34px;min-height:34px;padding:0 14px;border-radius:8px;font-size:13px;font-weight:700}
+
+/* Tlačítka na kartách dnů/firem v Objednávkách taky doprava dolů */
+.company-summary .route-stop{padding:14px}
+.company-summary .route-stop-main{display:flex;flex-direction:column}
+.company-summary .route-stop-main>button{align-self:flex-end;width:auto;min-width:0;height:34px;min-height:34px;margin-top:10px;padding:0 14px;border-radius:8px;font-size:13px;font-weight:700}
+/* Oddělovač drží u alergenů, ať nezůstane viset na konci řádku */
+.simple-meal .meal-meta small::before{content:"· ";color:#cbb794}
+.simple-meals .simple-meal-action{min-width:84px}
+/* Tlačítko zarovnat na roh celé karty, ne jen sloupce s jídly */
+.company-summary .route-stop{position:relative}
+.company-summary .route-stop-main{padding-bottom:44px}
+.company-summary .route-stop-main>button{position:absolute;right:14px;bottom:14px;margin-top:0}
+
+/* Logo Srub Podkozí drží svůj poměr stran 156:99, není to čtverec */
+.fitness-brand img,.simple-brand img{width:auto;height:36px;border-radius:8px;object-fit:contain}
+.simple-login .simple-brand img{height:56px}
+.fitness-brand img{height:46px}
+
+/* Plné názvy krabiček místo zkratek JK/VK potřebují širší sloupce */
+.admin-meal-totals article,.admin-meal-totals .meal-total-head{grid-template-columns:minmax(0,1fr) 82px 62px}
+.admin-meal-totals .meal-total-head b{font-size:11px;letter-spacing:-.2px}
+
+/* ---- Kuchyňský list ---- */
+.kitchen-sheet{max-width:1100px;margin:0 auto}
+.ks-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0 0 18px}
+.ks-head h1{margin:0;font-size:26px;font-weight:700}
+.ks-head p{margin:4px 0 0;color:#776b58;font-size:15px;text-transform:capitalize}
+.ks-head-right{text-align:right}
+.ks-head-right>strong{display:block;font-size:26px;font-weight:700;color:#231f18}
+.ks-head-right small{font-size:13px;color:#776b58;font-weight:650}
+.ks-actions{display:flex;gap:7px;justify-content:flex-end;margin-top:8px}
+.ks-block{margin-bottom:22px}
+.ks-block h2{margin:0 0 9px;font-size:17px;font-weight:700}
+.ks-block h2 small{color:#776b58;font-size:12px;font-weight:650;margin-left:6px}
+.ks-empty{margin:0;color:#776b58;font-size:14px}
+.ks-scroll{overflow-x:auto;border:1px solid #eee2cf;border-radius:12px;background:#fffdfa}
+.ks-table{border-collapse:collapse;width:100%;font-size:13px}
+.ks-table th,.ks-table td{border-bottom:1px solid #f0e6d3;border-right:1px solid #f0e6d3;padding:8px 6px;text-align:center;white-space:nowrap}
+.ks-table th:last-child,.ks-table td:last-child{border-right:0}
+.ks-table tbody tr:last-child td{border-bottom:0}
+.ks-table thead th{background:#fff3d5;color:#5c4a1e;font-weight:700;font-size:11px;line-height:1.2;vertical-align:bottom}
+.ks-table thead th span{display:inline-block;max-width:78px;white-space:normal}
+.ks-dish{text-align:left!important;font-weight:700;color:#231f18;position:sticky;left:0;background:#fffdfa;min-width:150px}
+.ks-table thead .ks-dish{background:#fff3d5}
+.ks-sum{background:#fff8e6;font-weight:800;color:#a96c00}
+.ks-soup td{background:#f6f7ee}
+.ks-soup .ks-dish{background:#f6f7ee}
+.ks-zero{color:#c9bda8}
+.ks-table tfoot td{background:#fff3d5;font-weight:800;color:#5c4a1e;border-top:2px solid #eadfc9}
+.ks-final .ks-table{font-size:14px}
+.ks-open{margin-left:auto;flex:none}
+
+@media print{
+ .fitness-header,.fitness-bottom-nav,.dev-switcher,.demo-label,.ks-actions,.ks-open{display:none!important}
+ .fitness-shell,.fitness-content{padding:0!important;background:#fff!important}
+ body,.fitness-shell{background:#fff!important}
+ .kitchen-sheet{max-width:none}
+ .ks-scroll{overflow:visible!important;border:1px solid #000;border-radius:0}
+ .ks-table th,.ks-table td{border-color:#000!important;padding:6px 5px}
+ .ks-table thead th,.ks-sum,.ks-table tfoot td,.ks-soup td,.ks-dish{background:#fff!important;color:#000!important}
+ .ks-head h1,.ks-head p,.ks-head-right>strong{color:#000!important}
+ @page{size:A4 landscape;margin:10mm}
+}
+/* Kuchyňský list je široká tabulka – nesmí ho svírat úzký obsahový sloupec */
+.fitness-content:has(.kitchen-sheet){max-width:none!important}
+@media print{.fitness-content,.fitness-content:has(.kitchen-sheet){max-width:none!important;padding:0!important}}
+/* Kuchyňský list je ranní akce – na Přehledu hned pod souhrnem */
+.ks-cta{margin-top:14px;justify-content:space-between}
+/* Kuchyňský list vsazený přímo do Přehledu */
+.ks-inline{margin-top:18px}
+.ks-inline-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.ks-inline-head h2{margin:0;font-size:19px;font-weight:700}
+.ks-inline .ks-block h2{font-size:15px}
+/* Řádek se souhrnem dne přetékal na úzkých displejích */
+.simple-day-total{flex-wrap:wrap;gap:10px}
+.simple-day-total>div{flex:1 1 160px;min-width:0}
+.simple-day-total>button{flex:0 0 auto;max-width:100%;height:34px;min-height:34px;padding:0 14px;border-radius:8px;font-size:13px;font-weight:700;margin-left:auto}
+
+/* Nastavení a správa firem */
+.set-card{background:var(--fitness-surface);border:1px solid var(--fitness-line);border-radius:14px;padding:15px;margin-bottom:14px}
+.set-card h2{margin:0 0 6px;font-size:17px;font-weight:700}
+.set-card p{margin:0 0 10px;color:#776b58;font-size:14px;line-height:1.5}
+.set-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.set-card-head h2{margin:0}
+.set-card form label{margin-bottom:10px}
+.firm-actions{display:flex;gap:6px;flex:none}
+.firm-actions .secondary{height:32px;min-height:32px;padding:0 11px;font-size:12px;border-radius:8px}
+.firm-actions .danger{color:#a33417;border-color:#f0cdbd}
+.firm-actions .danger:hover{background:#fdefe8}
+.toolbar{margin-bottom:14px}
+
+/* Čtyři sjednané ceny hlavních jídel vedle sebe */
+.price-grid{border:1px solid var(--fitness-line);border-radius:12px;padding:12px 13px 4px;margin:0 0 18px;background:#fffdfa}
+.price-grid legend{padding:0 6px;font-size:12px;font-weight:700;color:#57594e}
+.price-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.price-row label{margin-bottom:6px}
+.price-grid .footnote{margin:2px 0 8px}
+@media(max-width:420px){.price-row{grid-template-columns:repeat(2,1fr)}}
+
+/* Tlačítko karty patří do pravého dolního rohu */
+.set-card-foot{display:flex;justify-content:flex-end;margin-top:12px}
+.set-card-foot .primary,.set-card-foot .secondary{height:34px;min-height:34px;padding:0 14px;border-radius:8px;font-size:13px;font-weight:700}
+.set-card form label{display:block;margin-bottom:10px}
+.set-card .footnote{margin:2px 0 0}
+
+/* Modál firmy do stejné palety jako zbytek appky */
+#modal{border:0;border-radius:16px;padding:20px 18px;max-width:520px;width:calc(100% - 28px);background:var(--fitness-surface);color:var(--fitness-text)}
+#modal::backdrop{background:rgba(35,31,24,.45)}
+#modal h2{font-size:23px;font-weight:700;margin:0 0 4px;color:#231f18}
+#modal .eyebrow{margin:0 0 6px;color:#a96c00;font-size:11px;font-weight:800;letter-spacing:.7px}
+#modal label{font-size:12px;font-weight:700;color:#57594e}
+#modal input,#modal select{border:1px solid var(--fitness-line);border-radius:9px;background:#fff}
+#modal input:focus-visible,#modal select:focus-visible{outline:3px solid #ffd98a;outline-offset:2px}
+#modal .primary{background:#ffb000;color:#231f18}
+#modal .primary:hover:not(:disabled){background:#f0a600}
+#modal .secondary{background:#fff;border:1px solid var(--fitness-line);color:#57594e}
+#modal .modal-close{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:9px;background:#fff3d5;color:#a96c00;font-size:20px;line-height:1}
+#modal .footnote{color:#776b58;font-size:12px;line-height:1.5}
+
+/* ---- Notebooková verze: obsah využije šířku, tabulky se nemusí posouvat ---- */
+@media(min-width:1000px){
+ .fitness-content{max-width:1180px!important;padding-left:32px;padding-right:32px}
+ .kitchen-sheet,.delivery-view,.company-overview,.simple-meals{max-width:none}
+ .ks-scroll{overflow-x:visible}
+ .ks-table{table-layout:auto;font-size:14px}
+ .ks-table th,.ks-table td{padding:9px 8px}
+ .ks-table thead th span{max-width:none;white-space:nowrap}
+ .ks-dish{position:static;min-width:0}
+ /* dlaždice vedle sebe, ať stránka není jeden dlouhý sloupec */
+ .simple-meals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+ .set-card{max-width:720px}
+ .price-row{grid-template-columns:repeat(4,1fr)}
+ .delivery-route{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .state-list{max-width:720px}
+}
+@media(min-width:1400px){
+ .fitness-content{max-width:1320px!important}
+ .simple-meals{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(min-width:1000px){.fitness-content{width:auto!important}}
+
+/* Ceny M1–M4: dvě na řádek, ať se vejde celý text pole */
+.price-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:560px){.price-row{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.price-row input{padding-left:11px;padding-right:11px}
+.price-row input::placeholder{font-size:12px}
+
+/* Typ krabiček a příplatek musí být zarovnané i při zalomeném popisku */
+#modal .form-row{align-items:end;gap:12px}
+#modal .form-row label{margin-bottom:0;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+#modal .form-row select,#modal .form-row input{margin-top:7px;width:100%}
+
+/* Skupiny polí ve formuláři firmy */
+.form-group{border:1px solid var(--fitness-line);border-radius:12px;padding:12px 13px 4px;margin:0 0 16px;background:#fffdfa}
+.form-group legend{padding:0 6px;font-size:12px;font-weight:700;color:#57594e}
+.form-group .footnote{margin:2px 0 10px}
+.form-group label{margin-bottom:12px}
+
+/* ---- Karta dne v Objednávkách: vzdušná hlavička, tlačítko bez díry pod ním ---- */
+.company-summary .route-stop{padding:15px 15px 13px;position:static;column-gap:11px}
+.company-summary .route-stop-main{padding-bottom:0;display:block}
+.company-summary .route-stop h2{margin:0 0 3px;line-height:1.2}
+.company-summary .stop-tag{display:inline-block;margin:0 0 10px;padding:3px 9px;border-radius:999px;background:#ffe6ab;color:#8a5800;font-size:11px;font-weight:700}
+.company-summary .route-meals{gap:7px;padding-top:2px;border-top:1px solid #f2e4c8;margin-top:2px}
+.company-summary .route-meals span{padding-top:5px}
+.company-summary .route-stop-main>button{position:static;align-self:auto;float:right;margin:11px 0 0}
+.company-summary .route-stop-main::after{content:"";display:block;clear:both}
+.company-summary .route-stop>strong{padding-top:1px}
+/* Karta dne jako mřížka: číslo | obsah | porce, tlačítko vlastní řádek vpravo */
+.company-summary .route-stop{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:start;column-gap:11px;row-gap:0}
+.company-summary .route-stop>.route-number{grid-column:1;grid-row:1}
+.company-summary .route-stop>.route-stop-main{grid-column:2;grid-row:1;flex:none}
+.company-summary .route-stop>strong{grid-column:3;grid-row:1}
+.company-summary .route-stop>.stop-action{grid-column:1/-1;grid-row:2;justify-self:end;float:none;margin:12px 0 0}
+.company-summary .route-stop-main::after{content:none}
+
+/* Štítek a tlačítko sdílí spodní řádek karty – karta je tím kompaktnější */
+.company-summary .route-stop{padding:13px 14px 11px;row-gap:0}
+.company-summary .route-stop h2{margin:0 0 7px}
+.company-summary .route-meals{gap:6px}
+.company-summary .stop-foot{grid-column:1/-1;grid-row:2;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
+.company-summary .stop-tag{margin:0;padding:2px 8px;font-size:11px}
+.company-summary .stop-action{height:28px;min-height:28px;padding:0 11px;border-radius:7px;font-size:12px;font-weight:700;margin:0;justify-self:auto}
+/* Stav odesílání: krátký štítek vpravo, vysvětlení samostatně pod řádkem */
+.set-card .state-row{padding:11px 0}
+.set-card .state-row strong{white-space:nowrap}
+.mail-note{margin:8px 0 14px;color:#776b58;font-size:12px;line-height:1.5}
+
+/* ---- Náhled nahraného jídelníčku ---- */
+.import-loading{margin:14px 0;color:#776b58;font-size:14px}
+.import-note{margin:12px 0;padding:10px 12px;border-radius:10px;background:#fff3d5;color:#5c4a1e;font-size:13px;line-height:1.5}
+.import-note.warn{background:#ffe6d6;color:#8a3c14}
+#import-preview h3{margin:16px 0 8px;font-size:16px;font-weight:700}
+.import-day{margin-bottom:14px}
+.import-day h4{margin:0 0 6px;font-size:13px;font-weight:700;color:#a96c00;text-transform:capitalize}
+.import-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
+.import-cat{flex:none;width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:#fff0c9;color:#a96c00;font-size:11px;font-weight:800}
+.import-row input{flex:1 1 130px;min-height:34px;padding:6px 9px;font-size:13px}
+.import-row .import-price{flex:0 0 78px}
+.import-row.has-warn input{border-color:#e8a06f;background:#fff8f3}
+.import-warn{flex:1 1 100%;color:#a3521f;font-size:11px;padding-left:29px}
+
+/* Týden rozpoznaný z nahraného lístku */
+.import-week{margin:12px 0;padding:10px 12px;border-radius:10px;background:#e6f4d4;color:#3f5a0e;font-size:13px}
+
+/* ---- Úprava jídla ---- */
+#modal .modal-sub{margin:0 0 14px;color:#776b58;font-size:14px}
+#modal .modal-sub::first-letter{text-transform:uppercase}
+#modal .form-group input,#modal .form-group select{height:44px;min-height:44px}
+#modal .form-group .form-row{margin-bottom:6px}
+#modal .meal-delete{margin-top:10px;color:#a33417;border-color:#f0cdbd;background:#fff}
+#modal .meal-delete:hover{background:#fdefe8}
+#modal .footnote.center{text-align:center;margin:6px 0 0}
+
+/* ---- Výběr jako dlaždice místo rozbalovacího seznamu ---- */
+.choice{margin:0 0 14px}
+.choice-label{display:block;margin:0 0 7px;font-size:12px;font-weight:700;color:#57594e}
+.choice-group{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px}
+#modal .choice-option{position:relative;display:block;margin:0;cursor:pointer}
+#modal .choice-option input{position:absolute;inset:0;width:100%;height:100%;min-height:0;margin:0;opacity:0;cursor:pointer}
+.choice-option span{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:8px 10px;border:1.5px solid var(--fitness-line);border-radius:11px;background:#fff;color:#57594e;font-size:13px;font-weight:700;text-align:center;line-height:1.25;transition:border-color .15s,background .15s,color .15s}
+.choice-option:hover span{border-color:#f1d795;background:#fffaf0}
+.choice-option input:checked + span{border-color:#ffb000;background:#fff3d5;color:#231f18;box-shadow:inset 0 0 0 1px #ffb000}
+.choice-option input:checked + span::before{content:"✓";color:#a96c00;font-weight:900}
+.choice-option input:focus-visible + span{outline:3px solid #ffd98a;outline-offset:2px}
+.fee-field[hidden]{display:none!important}
+
+/* ---- Nahrávání lístku: plocha pro přetažení ---- */
+#modal .dropzone{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;margin:6px 0 12px;padding:26px 16px 22px;border:2px dashed #eadbb8;border-radius:16px;background:#fffaf0;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+#modal .dropzone:hover,#modal .dropzone.is-over{border-color:#ffb000;background:#fff3d5}
+#modal .dropzone input{position:absolute;inset:0;width:100%;height:100%;min-height:0;margin:0;opacity:0;cursor:pointer}
+#modal .dropzone:focus-within{outline:3px solid #ffd98a;outline-offset:2px}
+.dropzone-icon{display:grid;place-items:center;width:48px;height:48px;margin-bottom:8px;border-radius:14px;background:#ffb000;color:#231f18;font-size:22px;font-weight:900}
+.dropzone-title{font-size:16px;font-weight:700;color:#231f18}
+.dropzone-hint{font-size:13px;font-weight:500;color:#776b58}
+.dropzone-types{display:flex;gap:6px;margin-top:10px}
+.dropzone-types b{padding:3px 9px;border:1px solid #eee2cf;border-radius:999px;background:#fff;color:#a96c00;font-size:11px;font-weight:700}
+.dropzone-file{margin-top:10px;padding:4px 10px;border-radius:8px;background:#e6f4d4;color:#3f5a0e;font-size:12px;font-weight:700}
+.dropzone-file:empty{display:none}
+
+/* ---- Průběh čtení: kolečko s procenty ---- */
+.read-progress{display:grid;justify-items:center;gap:8px;padding:18px 0 6px}
+.read-dial{position:relative;width:96px;height:96px}
+.read-ring{width:100%;height:100%;transform:rotate(-90deg)}
+.read-ring circle{fill:none;stroke-width:6}
+.read-ring-bg{stroke:#f2e6cf}
+.read-ring-fg{stroke:#ffb000;stroke-linecap:round;transition:stroke-dashoffset .5s ease}
+.read-ring-spin{stroke:#fffaf0;stroke-linecap:round;opacity:.9}
+.read-spin{transform-box:view-box;transform-origin:32px 32px;animation:read-spin 1.2s linear infinite}
+.read-pct{position:absolute;inset:0;display:grid;place-items:center;color:#231f18;font-size:19px;font-weight:800}
+.read-text{margin:0;color:#776b58;font-size:13px;font-weight:600}
+@keyframes read-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.read-spin{animation:none;display:none}.read-ring-fg{transition:none}}
+
+/* ---- Přihlašovací stránka ---- */
+.login-page{min-height:100dvh;display:grid;place-items:center;max-width:none;margin:0;padding:28px 14px;background:radial-gradient(120% 55% at 50% 0%,#fff3d5 0%,var(--fitness-bg) 62%)}
+.login-card{width:100%;max-width:440px;padding:28px 24px 24px;border:1px solid var(--fitness-line);border-radius:20px;background:#fffdfa;box-shadow:0 18px 40px -24px rgba(35,31,24,.35)}
+.login-brand{display:flex;align-items:center;gap:14px;margin:0 0 26px}
+.login-logo{flex:none;width:auto;height:64px;border-radius:12px}
+.login-brand strong{display:block;color:#231f18;font-size:24px;font-weight:800;line-height:1.1;letter-spacing:-.4px}
+.login-brand span{display:block;margin-top:5px;color:#776b58;font-size:13px;font-weight:600}
+.login-card h1{margin:0 0 4px;color:#231f18;font-family:inherit;font-size:22px;font-weight:700;letter-spacing:-.3px}
+.login-sub{margin:0 0 18px;color:#776b58;font-size:14px;line-height:1.5}
+.login-card label{margin:0 0 14px;color:#57594e;font-size:12px;font-weight:700}
+.login-card input{height:48px;min-height:48px;border:1px solid var(--fitness-line);border-radius:12px;background:#fff;font-size:15px}
+.login-card input:focus-visible{border-color:#ffb000;outline:3px solid #ffd98a;outline-offset:1px}
+.login-card .primary.full{height:50px;min-height:50px;margin-top:4px;justify-content:center;border-radius:12px;background:#ffb000;color:#231f18;font-size:15px;font-weight:800}
+.login-card .primary.full:hover:not(:disabled){background:#f0a600}
+.login-card .form-error{margin:12px 0 0;text-align:center}
+.login-demo{margin-top:22px;padding-top:18px;border-top:1px solid #f0e6d3}
+.login-demo strong{display:block;color:#231f18;font-size:14px;font-weight:700}
+.login-demo p{margin:3px 0 10px;color:#776b58;font-size:12px}
+.login-demo-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.login-demo-choices .secondary{height:44px;min-height:44px;justify-content:center;border:1.5px solid var(--fitness-line);border-radius:11px;background:#fff;color:#57594e;font-size:13px;font-weight:700}
+.login-demo-choices .secondary:hover{border-color:#f1d795;background:#fffaf0;color:#231f18}
+@media(max-width:380px){.login-brand strong{font-size:21px}.login-logo{height:56px}.login-card{padding:24px 18px 20px}}
+
+/* ---- Očko pro zobrazení hesla ---- */
+.pw-field{margin:0 0 14px}
+.login-card .pw-label{display:block;margin:0 0 7px;color:#57594e;font-size:12px;font-weight:700}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:50px}
+.pw-toggle{position:absolute;top:50%;right:5px;transform:translateY(-50%);display:grid;place-items:center;width:40px;height:40px;padding:0;border-radius:9px;background:transparent;color:#776b58;cursor:pointer}
+.pw-toggle:active:not(:disabled){transform:translateY(-50%)}
+.pw-toggle:hover{background:#fff3d5;color:#a96c00}
+.pw-toggle:focus-visible{outline:3px solid #ffd98a;outline-offset:1px}
+.pw-toggle[aria-pressed="true"]{color:#a96c00}
+.pw-toggle svg{display:block}
+
+/* Cena jídla a pod ní příplatek za jednorázovou krabičku */
+.price-stack{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.simple-meals .simple-meal-action .price-stack strong{color:#231f18;font-size:19px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+.box-fee{color:#776b58;font-size:11px;font-weight:600;white-space:nowrap}
+
+/* Karty v Objednávkách: tlačítko nahoře vpravo u nadpisu, dole součet za den (klient) nebo za firmu (srub) */
+.delivery-route .route-stop{display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:11px;align-items:start}
+.delivery-route .route-stop>.route-stop-main{grid-column:2;grid-row:1;display:block;padding-bottom:0}
+.delivery-route .stop-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px;margin-bottom:6px}
+.delivery-route .stop-head h2{margin:0;line-height:1.2}
+.delivery-route .stop-head .stop-action{flex:none;height:28px;min-height:28px;margin:0;padding:0 11px;border-radius:7px;font-size:12px;font-weight:700}
+.delivery-route .route-meals span{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.delivery-route .route-meals span em{flex:1;min-width:0;font-style:normal;text-align:left}
+.delivery-route .route-meals span i{flex:none;color:#231f18;font-style:normal;font-weight:800;white-space:nowrap}
+.delivery-route .route-meals b{flex:none;margin-right:6px}
+.delivery-route .stop-total{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:9px;border-top:1px dashed #e6cf9c}
+.delivery-route .stop-count{display:flex;align-items:center;gap:8px;color:#776b58;font-size:12px;font-weight:650}
+.delivery-route .stop-count .stop-tag{margin:0;padding:2px 8px;border-radius:999px;background:#ffe6ab;color:#8a5800;font-size:11px;font-weight:700}
+.delivery-route .stop-sum{color:#776b58;font-size:12px;font-weight:650;white-space:nowrap}
+.delivery-route .stop-sum b{margin-left:7px;color:#231f18;font-size:17px;font-weight:800;letter-spacing:-.3px}
