@@ -587,3 +587,26 @@ h1,h2,h3,h4,p,button,input,select,textarea,label,.photo-layout-head h1,.photo-se
 .delivery-route .stop-count .stop-tag{margin:0;padding:2px 8px;border-radius:999px;background:#ffe6ab;color:#8a5800;font-size:11px;font-weight:700}
 .delivery-route .stop-sum{color:#776b58;font-size:12px;font-weight:650;white-space:nowrap}
 .delivery-route .stop-sum b{margin-left:7px;color:#231f18;font-size:17px;font-weight:800;letter-spacing:-.3px}
+
+/* Navigace sekcí: na mobilu a tabletu spodní lišta, na počítači panel vpravo vedle obsahu.
+   Starší vrstvy tlačily lištu do levého horního rohu pod přepínač účtů, kde nebyla vidět. */
+@media (min-width:768px) and (max-width:999px){
+ .fitness-shell{padding-left:0!important}
+ .fitness-bottom-nav{top:auto!important;left:0!important;right:0!important;bottom:0!important;width:auto!important;border-right:0!important;border-top:1px solid #eee2cf!important}
+ .fitness-content{padding-bottom:90px!important}
+}
+@media (min-width:1000px){
+ .fitness-shell{display:grid!important;grid-template-columns:minmax(0,1fr) 248px;grid-template-rows:auto 1fr auto;padding-left:0!important;padding-right:0!important;padding-bottom:0!important}
+ .fitness-shell>.fitness-header{grid-column:1;grid-row:1}
+ .fitness-shell>.fitness-content{grid-column:1;grid-row:2}
+ .fitness-shell>.demo-label{grid-column:1;grid-row:3}
+ .fitness-bottom-nav{grid-column:2;grid-row:1/-1;position:sticky!important;top:0!important;left:auto!important;right:auto!important;bottom:auto!important;align-self:start;width:auto!important;height:100vh!important;min-height:0!important;padding:22px 14px!important;border-top:0!important;border-right:0!important;border-left:1px solid #eee2cf!important;background:#fffdfa!important;box-shadow:none!important;backdrop-filter:none!important}
+ .fitness-bottom-nav>div{display:flex!important;flex-direction:column!important;gap:6px!important;height:auto!important;overflow:visible!important}
+ .fitness-bottom-nav button{flex:0 0 auto!important;width:100%!important;height:50px!important;min-height:50px!important;flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;gap:12px!important;padding:0 16px!important;border-radius:10px!important;color:#665e54!important;font-size:15px!important;font-weight:650!important;letter-spacing:0!important;line-height:1.2!important}
+ .fitness-bottom-nav button:hover{background:#fff4dd!important;color:#231f18!important}
+ .fitness-bottom-nav button.selected{background:#fff4dd!important;color:#a96c00!important;font-weight:750!important}
+ .fitness-bottom-nav button.selected::before{content:""!important;left:0!important;right:auto!important;top:11px!important;bottom:11px!important;width:3px!important;height:auto!important;border-radius:3px!important;background:#ffb000!important}
+ .fitness-nav-icon{width:24px!important;height:24px!important;margin:0!important}
+ .fitness-nav-icon svg{width:21px!important;height:21px!important}
+}
+@media print{.fitness-shell{display:block!important;padding:0!important}}
