@@ -12,7 +12,7 @@ import {readMenuFile,reviewMeals,detectWeek,LIMITS} from './lib/menu-import.mjs'
 // Jídla dne i s pořadím hlavního jídla (M1–M4); polévka má slot 0.
 const SQL_MEALS_WITH_SLOT="SELECT *,CASE WHEN category='Polévka' THEN 0 ELSE ROW_NUMBER() OVER (PARTITION BY category='Polévka' ORDER BY id) END AS slot FROM meals WHERE date=? ORDER BY id";
 import {weekMenu} from './seed-menu.mjs';
-import {loginAllowed,recordFailedLogin,clearLoginFailures,pruneLoginAttempts} from './lib/login-rate-limit.ts';
+import {loginAllowed,recordFailedLogin,clearLoginFailures,pruneLoginAttempts} from './lib/login-rate-limit.mjs';
 
 const root=dirname(fileURLToPath(import.meta.url));
 const demo=process.env.DEMO==='true';
