@@ -152,7 +152,7 @@ const server=http.createServer(async(req,res)=>{
  function send(code,value,extra={}){res.writeHead(code,{'Content-Type':'application/json; charset=utf-8',...headers,...extra});res.end(Buffer.isBuffer(value)?value:typeof value==='string'?value:JSON.stringify(value));}
  try{
   const url=new URL(req.url,'http://localhost'), path=url.pathname;
-  if(!path.startsWith('/api/')){if(req.method!=='GET')return send(405,{error:'Nepovolená metoda.'});const files={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/brand.svg':'brand.svg','/logo.png':'logo.png','/favicon.png':'favicon.png','/apple-touch-icon.png':'apple-touch-icon.png','/brand-goat.svg':'brand-goat.svg','/brand-full.svg':'brand-full.svg'};if(!files[path])return send(404,{error:'Stránka neexistuje.'});const ext=path==='/'?'.html':path.slice(path.lastIndexOf('.'));return send(200,readFileSync(resolve(root,'public',files[path]),['.png','.pdf'].includes(ext)?null:'utf8'),{'Content-Type':mime[ext]});}
+  if(!path.startsWith('/api/')){if(req.method!=='GET')return send(405,{error:'Nepovolená metoda.'});const files={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/brand.svg':'brand.svg','/logo.png':'logo.png','/favicon.svg':'favicon.svg','/apple-touch-icon.png':'apple-touch-icon.png','/brand-goat.svg':'brand-goat.svg','/brand-full.svg':'brand-full.svg'};if(!files[path])return send(404,{error:'Stránka neexistuje.'});const ext=path==='/'?'.html':path.slice(path.lastIndexOf('.'));return send(200,readFileSync(resolve(root,'public',files[path]),['.png','.pdf'].includes(ext)?null:'utf8'),{'Content-Type':mime[ext]});}
   let body={};
   if(req.method!=='GET'){
    const expected=process.env.APP_ORIGIN||`http://${req.headers.host}`;
