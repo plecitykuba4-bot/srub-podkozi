@@ -718,3 +718,17 @@ html{scrollbar-gutter:stable}
 /* Tlačítko pro rozbalení firem bez objednávky */
 .missing-toggle{display:block;width:100%;height:auto;min-height:44px;margin-top:8px;padding:10px 14px;border:1px dashed #e6cf9c;border-radius:10px;background:#fffdfa;color:#a96c00;font-size:14px;font-weight:700;cursor:pointer;box-shadow:none}
 .missing-toggle:hover{border-style:solid;border-color:#ffb000;background:#fff4dd}
+
+/* Nastavení: mezery uvnitř karet */
+.set-card .mail-note{margin:8px 0 14px!important}
+.set-card form>label{margin-bottom:0}
+.set-card-foot{gap:10px!important;flex-wrap:wrap;justify-content:flex-end}
+
+/* Nastavení na počítači: dva sloupce, karty se skládají pod sebe bez děr pod kratšími kartami */
+@media (min-width:1000px){
+ .fitness-content:has(> .set-card){display:block!important;column-count:2;column-gap:18px}
+ .fitness-content:has(> .set-card)>.simple-title{column-span:all;margin:0 0 18px!important}
+ .fitness-content:has(> .set-card)>.set-card{display:block;width:100%;break-inside:avoid;margin:0 0 18px!important;box-sizing:border-box}
+}
+/* Tlačítko pro uložení hesla stejně velké a zarovnané jako ostatní tlačítka v Nastavení */
+.set-card form>button.primary:not(.small){display:flex;width:auto!important;height:34px;min-height:34px;margin:12px 0 0 auto;padding:0 14px;border-radius:8px;font-size:13px}
