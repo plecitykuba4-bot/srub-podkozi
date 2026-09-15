@@ -739,14 +739,26 @@ document.addEventListener('click',async e=>{
  if(month){const d=new Date(state.date.slice(0,8)+'01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+Number(month.dataset.monthShift));state.date=d.toISOString().slice(0,10);await render();}
 });
 
-// Okno s týdnem se zavře i kliknutím mimo něj, ať není nutné rolovat zpátky ke křížku.
-// Jen u tohoto okna – formuláře by se kliknutím vedle zavřely i s rozepsanými údaji.
-$('#modal').addEventListener('click',e=>{
- const dlg=e.currentTarget;
- if(!dlg.classList.contains('week-modal')||e.target!==dlg)return;
- const r=dlg.getBoundingClientRect();
- if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dlg.close();
-});
+// Každé okno se zavře kliknutím vedle něj, není nutné mířit na křížek.
+// Rozepsaný formulář se ale bez potvrzení nezavře a probíhající čtení jídelníčku se nepřeruší.
+{
+ const dlg=$('#modal');
+ let downOutside=false;
+ const outside=e=>{const r=dlg.getBoundingClientRect();return e.target===dlg&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom);};
+ const changed=()=>[...dlg.querySelectorAll('input,textarea,select')].some(el=>
+  el.type==='checkbox'||el.type==='radio'?el.checked!==el.defaultChecked:
+  el.tagName==='SELECT'?[...el.options].some(o=>o.selected!==o.defaultSelected):
+  el.type==='file'?el.files?.length>0:el.value!==el.defaultValue);
+ // Kliknutí se počítá jen když začalo i skončilo mimo okno – označování textu přetažením ven okno nezavře.
+ dlg.addEventListener('mousedown',e=>{downOutside=outside(e);});
+ dlg.addEventListener('click',e=>{
+  if(!downOutside||!outside(e))return;
+  downOutside=false;
+  if(dlg.querySelector('.read-ring'))return;
+  if(changed()&&!confirm('Máte neuložené změny. Opravdu okno zavřít?'))return;
+  dlg.close();
+ });
+}
 
 
 // Seznam firem bez objednávky v Přehledu: rozbalí zbylé firmy, nebo je zase schová.
