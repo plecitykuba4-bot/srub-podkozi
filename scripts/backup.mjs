@@ -16,8 +16,10 @@ const db=new DatabaseSync(source,{readOnly:true});
 try{await backup(db,file);}finally{db.close();}
 const check=new DatabaseSync(file,{readOnly:true});
 try{if(check.prepare('PRAGMA integrity_check').get().integrity_check!=='ok')throw new Error('Kontrola zálohy selhala.');}finally{check.close();}
+// Otevření zálohy ke kontrole po sobě na Linuxu nechává pomocné soubory SQLite – k hotové záloze nepatří.
+for(const side of ['-shm','-wal'])if(existsSync(file+side))unlinkSync(file+side);
 for(const entry of readdirSync(target,{withFileTypes:true})){
- if(!entry.isFile()||!/^srub-\d{4}-\d{2}-\d{2}T[\dZ-]+\.sqlite$/.test(entry.name))continue;
+ if(!entry.isFile()||!/^srub-\d{4}-\d{2}-\d{2}T[\dZ-]+\.sqlite(-shm|-wal)?$/.test(entry.name))continue;
  const old=resolve(target,entry.name);
  if(dirname(old)!==target)throw new Error('Neplatná cesta zálohy.');
  if(old!==file&&statSync(old).mtimeMs<Date.now()-days*86400000)unlinkSync(old);
