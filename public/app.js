@@ -784,7 +784,7 @@ async function adminEditModal(date){
  const unit=m=>money(m.price)+(m.fee?` + ${money(m.fee)} krabička`:'');
  openModal(`<p class="eyebrow">${esc(d.company.name)} · úprava restaurací</p><h2>${dateLabel(date,{weekday:'long',day:'numeric',month:'long'})}</h2>
   <p class="modal-sub">${d.closed?'Den je po uzávěrce – firma sama už měnit nemůže. ':''}Nastavte počty porcí. 0 jídlo z objednávky odebere.</p>
-  <form id="admin-order-form" data-company="${d.company.id}" data-date="${date}">
+  <form id="admin-order-form" data-company="${d.company.id}" data-date="${date}" data-name="${esc(d.company.name)}">
    <div class="admin-edit-list">${d.meals.map(m=>`<div class="admin-edit-row">
     <div><b>${esc(m.name)}</b><small>${m.category==='Polévka'?'Polévka':'M'+m.slot} · ${unit(m)}${m.locked?' · cena z objednávky':''}</small></div>
     <div class="admin-edit-qty"><button type="button" class="secondary" data-edit-delta="-1" aria-label="Ubrat">−</button><input type="number" name="q${m.id}" data-meal="${m.id}" min="0" max="500" step="1" value="${m.quantity}" inputmode="numeric"><button type="button" class="secondary" data-edit-delta="1" aria-label="Přidat">+</button></div>
@@ -806,6 +806,31 @@ document.addEventListener('submit',async e=>{
   if(items.some(x=>!Number.isInteger(x.quantity)||x.quantity<0||x.quantity>500))throw new Error('Počet porcí musí být celé číslo od 0 do 500.');
   const r=await api('admin/order',{company_id:Number(f.dataset.company),date:f.dataset.date,items});
   $('#modal').close();await render();
-  toast(r.changed?'Objednávka je upravená. Kuchyňský list i součty jsou aktuální.':'Beze změny – počty zůstaly stejné.');
+  const kdy=dateLabel(f.dataset.date,{weekday:'long',day:'numeric',month:'numeric'});
+  toast(r.changed?{title:'Objednávka upravena',text:`${f.dataset.name} · ${kdy} — kuchyňský list i součty jsou přepočítané.`}:{title:'Beze změny',text:`${f.dataset.name} · ${kdy} — počty porcí zůstaly stejné.`},false,6000);
  }catch(err){btn.disabled=false;toast(err.message,true);}
 });
+
+// Hláška po akci: karta s ikonou, nadpisem a popisem, pruhem zbývajícího času a zavíracím křížkem.
+// toast('text') nebo toast({title,text}); druhý parametr true = chyba. Najetí myší odpočet zastaví.
+toast=function(message,error=false,ms=4500){
+ const box=$('#toast');clearTimeout(toast.timer);
+ const {title,text}=typeof message==='object'&&message?message:{title:error?'Něco se nepovedlo':'Hotovo',text:String(message)};
+ const icon=error
+  ?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v6M12 16.5v.5"/></svg>'
+  :'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg>';
+ box.setAttribute('role',error?'alert':'status');
+ box.innerHTML=`<div class="toast-card ${error?'is-error':'is-ok'}"><span class="toast-icon">${icon}</span><div class="toast-body"><strong>${esc(title)}</strong>${text?`<span>${esc(text)}</span>`:''}</div><button type="button" class="toast-close" aria-label="Zavřít hlášku">×</button><i class="toast-bar"></i></div>`;
+ const card=box.firstElementChild,bar=card.querySelector('.toast-bar');
+ bar.style.setProperty('--toast-ms',ms+'ms');
+ let left=ms,started=Date.now();
+ const hide=()=>{card.classList.add('is-leaving');clearTimeout(toast.timer);toast.timer=setTimeout(()=>{if(box.firstElementChild===card){box.innerHTML='';try{box.hidePopover?.();}catch{}}},260);};
+ const arm=()=>{started=Date.now();toast.timer=setTimeout(hide,left);};
+ card.addEventListener('mouseenter',()=>{clearTimeout(toast.timer);left-=Date.now()-started;card.classList.add('is-paused');});
+ card.addEventListener('mouseleave',()=>{card.classList.remove('is-paused');arm();});
+ card.querySelector('.toast-close').addEventListener('click',hide);
+ // Hláška jde do vrchní vrstvy prohlížeče, aby byla vidět i nad otevřeným oknem.
+ if(box.showPopover){if(!box.popover)box.popover='manual';try{box.hidePopover();}catch{}box.showPopover();}
+ requestAnimationFrame(()=>card.classList.add('is-in'));
+ arm();
+};
