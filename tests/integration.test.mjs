@@ -41,6 +41,21 @@ test('Přihlášení, role, oddělení firem, objednávky, ceny a revokace pří
   assert.equal((await call('menu?date='+date,null,client)).data.orders.find(x=>x.meal_id===m.id).price,10000,'otevřený den se přecení');
   await call('order',{date,items:[{id:m.id,quantity:9}]},client);
   assert.equal((await call('menu?date='+date,null,client)).data.orders.find(x=>x.meal_id===m.id).price,10000,'nová objednávka jede za novou cenu');
+  // Restaurace upraví objednávku za firmu i v uzavřeném minulém dni; firma sama nesmí.
+  const past=dayAfter(pragueNow().date,-((new Date(pragueNow().date+'T12:00:00Z').getUTCDay()+6)%7)-7);
+  const pastMeals=(await call(`admin/order?company=${clientId}&date=${past}`,null,admin)).data.meals;
+  assert.ok(pastMeals.length>0,'minulý týden má jídelníček');
+  assert.equal((await call('admin/order',{company_id:clientId,date:past,items:[{id:pastMeals[0].id,quantity:3}]},client)).status,403,'firma nesmí upravovat za restauraci');
+  const edited=await call('admin/order',{company_id:clientId,date:past,items:[{id:pastMeals[0].id,quantity:3}]},admin);
+  assert.equal(edited.status,200);assert.equal(edited.data.changed,1);
+  const hist=(await call('history',null,client)).data;
+  assert.equal(hist.rows.find(r=>r.meal_id===pastMeals[0].id).quantity,3,'firma vidí upravený počet');
+  assert.ok(hist.edits.some(e=>e.date===past),'firma vidí poznámku o úpravě');
+  // Úprava počtu u už objednaného jídla nemění cenu z doby objednání.
+  await call('admin/order',{company_id:clientId,date,items:[{id:m.id,quantity:5}]},admin);
+  const kept=(await call('menu?date='+date,null,client)).data.orders.find(x=>x.meal_id===m.id);
+  assert.equal(kept.quantity,5);assert.equal(kept.price,10000,'cena z objednávky zůstává');
+  await call('admin/order',{company_id:clientId,date,items:[{id:m.id,quantity:9}]},admin);
   assert.equal((await call('companies',{name:'Test s.r.o.',email:'new@example.cz',address:'Chyňava',price:'',soup_price:'',packaging:'own',fee:0,password:'MyNewPassword123'},admin)).status,200);
   const newCookie=(await call('login',{email:'new@example.cz',password:'MyNewPassword123'})).cookie;
   assert.ok(newCookie);assert.equal((await call('history',null,newCookie)).data.rows.length,0);

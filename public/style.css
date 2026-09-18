@@ -732,3 +732,15 @@ html{scrollbar-gutter:stable}
 }
 /* Tlačítko pro uložení hesla stejně velké a zarovnané jako ostatní tlačítka v Nastavení */
 .set-card form>button.primary:not(.small){display:flex;width:auto!important;height:34px;min-height:34px;margin:12px 0 0 auto;padding:0 14px;border-radius:8px;font-size:13px}
+
+/* Úprava objednávky restaurací a poznámka o úpravě u dne */
+.edit-note{margin:2px 0 8px;color:#a96c00;font-size:12px;font-weight:700}
+.admin-edit-list{display:grid;gap:8px;margin:14px 0 16px}
+.admin-edit-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #eee2cf;border-radius:12px;background:#fff}
+.admin-edit-row>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.admin-edit-row b{color:#231f18;font-size:14px;font-weight:700}
+.admin-edit-row small{color:#776b58;font-size:12px}
+.admin-edit-qty{display:flex;align-items:center;gap:6px;flex:none}
+.admin-edit-qty button{width:34px;min-width:34px;height:34px;min-height:34px;padding:0;border-radius:8px;font-size:18px;font-weight:700}
+.admin-edit-qty input{width:56px;height:34px;min-height:34px;margin:0;padding:0 6px;text-align:center;font-size:15px;font-weight:700}
+.stop-head .stop-action[data-admin-edit]{flex:none}

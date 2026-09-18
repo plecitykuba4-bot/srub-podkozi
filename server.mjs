@@ -35,6 +35,7 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS reports(date TEXT PRIMARY KEY,body TEXT NOT NULL,status TEXT NOT NULL,created TEXT NOT NULL,sent TEXT,error TEXT);
  CREATE TABLE IF NOT EXISTS login_attempts(key TEXT PRIMARY KEY,count INTEGER NOT NULL,until INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS order_edits(company_id INTEGER NOT NULL,date TEXT NOT NULL,edited_at TEXT NOT NULL,PRIMARY KEY(company_id,date));
 `);
 for(const n of [1,2,3,4])addColumnIfMissing('companies',`price_m${n}`,'INTEGER');
 // Jak se firmě vyúčtovává: po týdnech, nebo za celý kalendářní měsíc.
@@ -207,9 +208,9 @@ const server=http.createServer(async(req,res)=>{
    const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');
    const company=user.role==='company'?get('SELECT * FROM companies WHERE id=?',user.company_id):null;
    const meals=all(SQL_MEALS_WITH_SLOT,date).map(m=>({...m,price:company?portionPrice(m,company):m.price}));
-   return send(200,{date,closed:closed(date),meals,company,orders:company?rowsFor(date,company.id):rowsFor(date),dates:all('SELECT DISTINCT date FROM meals WHERE date>=? ORDER BY date',pragueNow().date).map(x=>x.date)});
+   return send(200,{date,closed:closed(date),meals,company,edited:company?get('SELECT edited_at FROM order_edits WHERE company_id=? AND date=?',company.id,date)?.edited_at||null:null,orders:company?rowsFor(date,company.id):rowsFor(date),dates:all('SELECT DISTINCT date FROM meals WHERE date>=? ORDER BY date',pragueNow().date).map(x=>x.date)});
   }
-  if(path==='/api/history'&&req.method==='GET')return send(200,{menuDates:all('SELECT DISTINCT date FROM meals ORDER BY date').map(m=>m.date),rows:all(`SELECT o.*,m.name,m.date FROM orders o JOIN meals m ON m.id=o.meal_id ${user.role==='company'?'WHERE o.company_id=?':''} ORDER BY m.date DESC,m.id`,...user.role==='company'?[user.company_id]:[])});
+  if(path==='/api/history'&&req.method==='GET')return send(200,{menuDates:all('SELECT DISTINCT date FROM meals ORDER BY date').map(m=>m.date),rows:all(`SELECT o.*,m.name,m.date FROM orders o JOIN meals m ON m.id=o.meal_id ${user.role==='company'?'WHERE o.company_id=?':''} ORDER BY m.date DESC,m.id`,...user.role==='company'?[user.company_id]:[]),edits:user.role==='company'?all('SELECT date,edited_at FROM order_edits WHERE company_id=?',user.company_id):[]});
   if(path==='/api/order'&&req.method==='POST'){
    if(user.role!=='company')return send(403,{error:'Objednávání je dostupné firmám.'});
    if(!validDate(body.date)||!Array.isArray(body.items)||body.items.length>100)throw new Error('Neplatná objednávka.');
@@ -232,7 +233,33 @@ const server=http.createServer(async(req,res)=>{
    if(company.billing==='month'){from=date.slice(0,8)+'01';const end=new Date(from+'T12:00:00Z');end.setUTCMonth(end.getUTCMonth()+1);end.setUTCDate(0);to=end.toISOString().slice(0,10);}
    else{const d=new Date(date+'T12:00:00Z');from=dayAfter(date,-((d.getUTCDay()+6)%7));to=dayAfter(from,4);}
    const rows=all('SELECT o.quantity,o.price,o.fee,o.packaging,m.id meal_id,m.name,m.category,m.date FROM orders o JOIN meals m ON m.id=o.meal_id WHERE o.company_id=? AND m.date BETWEEN ? AND ? AND o.quantity>0 ORDER BY m.date,m.id',company.id,from,to);
-   return send(200,{companies,company,rows,from,to});
+   return send(200,{companies,company,rows,from,to,edits:all('SELECT date,edited_at FROM order_edits WHERE company_id=? AND date BETWEEN ? AND ?',company.id,from,to)});
+  }
+  // Úprava objednávky restaurací za firmu (např. po telefonátu po uzávěrce). Platí pro jakýkoli den.
+  // Jídla, která už firma měla, si drží cenu z doby objednání; nově přidaná dostanou sjednanou cenu firmy.
+  if(path==='/api/admin/order'&&req.method==='GET'){
+   const date=url.searchParams.get('date');if(!validDate(date))throw new Error('Neplatné datum.');
+   const c=get('SELECT * FROM companies WHERE id=?',Number(url.searchParams.get('company')));if(!c)throw new Error('Firma neexistuje.');
+   const orders=all('SELECT * FROM orders WHERE company_id=?',c.id);
+   const meals=all(SQL_MEALS_WITH_SLOT,date).map(m=>{const o=orders.find(x=>x.meal_id===m.id);return {id:m.id,name:m.name,description:m.description,category:m.category,slot:m.slot,quantity:o?.quantity||0,price:o?o.price:portionPrice(m,c),fee:o?o.fee:(c.packaging==='own'?0:c.fee),locked:Boolean(o)};});
+   return send(200,{date,closed:closed(date),company:{id:c.id,name:c.name,packaging:c.packaging,fee:c.fee},meals,edited:get('SELECT edited_at FROM order_edits WHERE company_id=? AND date=?',c.id,date)?.edited_at||null});
+  }
+  if(path==='/api/admin/order'&&req.method==='POST'){
+   if(!validDate(body.date)||!Number.isInteger(body.company_id)||!Array.isArray(body.items)||body.items.length>100)throw new Error('Neplatná úprava objednávky.');
+   const c=get('SELECT * FROM companies WHERE id=?',body.company_id);if(!c)throw new Error('Firma neexistuje.');
+   const meals=all(SQL_MEALS_WITH_SLOT,body.date);const seen=new Set();let changed=0;
+   transaction(()=>{
+    for(const item of body.items){
+     if(!Number.isInteger(item.id)||!Number.isInteger(item.quantity)||item.quantity<0||item.quantity>500||seen.has(item.id))throw new Error('Počet porcí musí být celé číslo od 0 do 500.');
+     seen.add(item.id);const m=meals.find(x=>x.id===item.id);if(!m)throw new Error('Jídlo v tento den není v jídelníčku.');
+     const o=get('SELECT * FROM orders WHERE company_id=? AND meal_id=?',c.id,m.id);
+     if(item.quantity===0){if(o){run('DELETE FROM orders WHERE company_id=? AND meal_id=?',c.id,m.id);changed++;}}
+     else if(o){if(o.quantity!==item.quantity){run('UPDATE orders SET quantity=?,updated=? WHERE company_id=? AND meal_id=?',item.quantity,new Date().toISOString(),c.id,m.id);changed++;}}
+     else{run('INSERT INTO orders VALUES(?,?,?,?,?,?,?)',c.id,m.id,item.quantity,portionPrice(m,c),c.packaging==='own'?0:c.fee,c.packaging,new Date().toISOString());changed++;}
+    }
+    if(changed)run('INSERT INTO order_edits VALUES(?,?,?) ON CONFLICT(company_id,date) DO UPDATE SET edited_at=excluded.edited_at',c.id,body.date,new Date().toISOString());
+   });
+   return send(200,{ok:true,changed});
   }
   if(path==='/api/dashboard'&&req.method==='GET'){const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');return send(200,{...summary(date),closed:closed(date),companies:all('SELECT * FROM companies ORDER BY name'),report:get('SELECT date,status,sent,error FROM reports WHERE date=?',date)||null});}
   if(path==='/api/menu/read'&&req.method==='POST'){
