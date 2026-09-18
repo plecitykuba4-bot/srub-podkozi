@@ -776,3 +776,12 @@ html{scrollbar-gutter:stable}
 /* Hláška jako popover ve vrchní vrstvě – bez výchozího rámečku a pozadí prohlížeče */
 #toast[popover]{inset:auto;left:50%;bottom:calc(58px + 14px + env(safe-area-inset-bottom));margin:0;border:0;padding:0;background:none;overflow:visible;color:inherit}
 @media (min-width:1000px){#toast[popover]{left:auto;right:28px;bottom:28px}}
+
+/* Počet porcí při objednávce firmy: velká tlačítka − a + pro prst, číslo mezi nimi uprostřed */
+#modal .quantity-picker{display:grid;grid-template-columns:60px minmax(0,1fr) 60px;align-items:center;gap:16px;margin:10px 0 20px}
+#modal .quantity-picker button{display:grid;place-items:center;width:60px;min-width:60px;height:60px;min-height:60px;margin:0;padding:0;border:1px solid #f1d795;border-radius:18px;background:#fff4dd;color:#a96c00;font-size:30px;font-weight:700;line-height:1;box-shadow:none;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent;transition:transform .12s ease,background-color .12s ease}
+#modal .quantity-picker button:hover{background:#ffe6ab}
+#modal .quantity-picker button:active{transform:scale(.93);background:#ffd98a}
+#modal .quantity-picker button:focus-visible{outline:3px solid #ffd98a;outline-offset:2px}
+#modal .quantity-picker input{width:100%;min-width:0;height:60px;min-height:60px;margin:0;padding:0!important;border-radius:18px;text-align:center;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;color:#231f18;-moz-appearance:textfield;appearance:textfield}
+#modal .quantity-picker input::-webkit-outer-spin-button,#modal .quantity-picker input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
