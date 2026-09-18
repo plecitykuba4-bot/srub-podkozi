@@ -814,3 +814,8 @@ html{scrollbar-gutter:stable}
 
 /* Pruh „Celkem za týden / měsíc / všechny firmy“ stejně široký jako karty nad ním i platba pod ním – na všech šířkách */
 .admin-orders-total{width:auto!important;max-width:none!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box}
+
+/* Uložení QR kódu do telefonu */
+.pay-qr .pay-save{margin-top:6px;min-width:176px;height:38px;min-height:38px;border-radius:10px;font-weight:700}
+.pay-qr .pay-save-hint{max-width:190px;color:#8b7f6c;font-size:11px;line-height:1.35;text-align:center}
+@media (max-width:520px){.pay-qr .pay-save{min-width:210px;height:44px;min-height:44px}.pay-qr .pay-save-hint{max-width:230px}}

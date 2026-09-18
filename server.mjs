@@ -240,6 +240,15 @@ const server=http.createServer(async(req,res)=>{
    const c=get('SELECT * FROM companies WHERE id=?',user.role==='admin'?Number(url.searchParams.get('company')):user.company_id);if(!c)throw new Error('Firma neexistuje.');
    return send(200,await paymentFor(c,date));
   }
+  if(path==='/api/payment/qr.png'&&req.method==='GET'){
+   const date=url.searchParams.get('date')||'';if(!validDate(date))throw new Error('Neplatné datum.');
+   const c=get('SELECT * FROM companies WHERE id=?',user.role==='admin'?Number(url.searchParams.get('company')):user.company_id);if(!c)throw new Error('Firma neexistuje.');
+   const p=await paymentFor(c,date);const iban=setting('bankIban');
+   if(!p.finished||!p.amount||!iban)throw new Error('QR kód pro toto období zatím není k dispozici.');
+   const png=await QRCode.toBuffer(spdString({iban,amount:p.amount,vs:p.vs,message:p.message}),{type:'png',errorCorrectionLevel:'M',margin:4,width:900,color:{dark:'#000000',light:'#ffffff'}});
+   const slug=(c.name+'-'+p.label).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+   return send(200,png,{'Content-Type':'image/png','Content-Disposition':`attachment; filename="qr-platba-srub-podkozi-${slug}.png"`});
+  }
   if(path==='/api/payment/paid'&&req.method==='POST'){
    if(!validDate(body.date))throw new Error('Neplatné datum.');
    const c=get('SELECT * FROM companies WHERE id=?',user.role==='admin'?Number(body.company_id):user.company_id);if(!c)throw new Error('Firma neexistuje.');

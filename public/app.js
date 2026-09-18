@@ -861,7 +861,7 @@ function payCard(p){
  return `<section class="pay-card ${p.paid?'is-paid':''}">
   <div class="pay-head"><h2>${esc(title)}</h2>${p.paid?`<span class="pay-badge is-paid">✓ Zaplaceno</span>`:`<span class="pay-badge is-due">K úhradě</span>`}</div>
   <div class="pay-body">
-   <div class="pay-qr">${p.svg?`<div class="pay-qr-code" role="img" aria-label="QR kód pro platbu ${money(p.amount)}">${p.svg}</div><small>Naskenujte v bankovní aplikaci</small>`:`<div class="pay-qr-missing">QR kód se zobrazí, až restaurace doplní číslo účtu.</div>`}</div>
+   <div class="pay-qr">${p.svg?`<div class="pay-qr-code" role="img" aria-label="QR kód pro platbu ${money(p.amount)}">${p.svg}</div><small>Naskenujte v bankovní aplikaci</small><button type="button" class="secondary small pay-save" data-pay-save>↓ Uložit QR kód</button><small class="pay-save-hint">Uloží obrázek do telefonu – v bance ho pak vyberete z galerie.</small>`:`<div class="pay-qr-missing">QR kód se zobrazí, až restaurace doplní číslo účtu.</div>`}</div>
    <dl class="pay-details">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
   </div>
   <div class="pay-foot">${p.paid
@@ -887,4 +887,28 @@ document.addEventListener('submit',async e=>{
   await render();
   toast(r.iban?{title:'Účet uložen',text:`QR platby půjdou na ${r.iban}.`}:{title:'Účet odebrán',text:'QR kódy se firmám nezobrazí, dokud účet znovu nevyplníte.'});
  }catch(err){btn.disabled=false;toast(err.message,true);}
+});
+
+
+// Uložení QR kódu jako obrázku: na telefonu přes nabídku sdílení (Uložit obrázek → Fotky/galerie),
+// jinde klasické stažení souboru.
+document.addEventListener('click',async e=>{
+ const b=e.target.closest('[data-pay-save]');if(!b)return;
+ const p=state.data?.payment;if(!p)return;
+ b.disabled=true;
+ try{
+  const res=await fetch(`/api/payment/qr.png?date=${state.date}${state.user.role==='admin'?'&company='+p.company.id:''}`,{credentials:'same-origin'});
+  if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error||'QR kód se nepodařilo připravit.');
+  const name=(res.headers.get('content-disposition')||'').match(/filename="([^"]+)"/)?.[1]||'qr-platba.png';
+  const blob=await res.blob();
+  const file=new File([blob],name,{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})&&matchMedia('(pointer:coarse)').matches){
+   try{await navigator.share({files:[file],title:'QR platba – Srub Podkozí'});}catch(err){if(err.name!=='AbortError')throw err;}
+  }else{
+   const url=URL.createObjectURL(blob);const link=document.createElement('a');
+   link.href=url;link.download=name;document.body.append(link);link.click();link.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),10000);
+  }
+ }catch(err){toast(err.message,true);}
+ finally{b.disabled=false;}
 });
