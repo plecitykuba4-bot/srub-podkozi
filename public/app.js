@@ -877,7 +877,6 @@ document.addEventListener('click',async e=>{
   const paid=b.dataset.payToggle==='1';
   await api('payment/paid',{date:state.date,paid,company_id:p.company.id});
   await render();
-  toast(paid?{title:'Označeno jako zaplacené',text:`${p.company.name} · ${p.label} · ${money(p.amount)}`}:{title:'Označení zrušeno',text:`${p.company.name} · ${p.label} je znovu k úhradě.`});
  }catch(err){b.disabled=false;toast(err.message,true);}
 });
 document.addEventListener('submit',async e=>{
