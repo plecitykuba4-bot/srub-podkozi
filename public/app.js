@@ -25,7 +25,7 @@ function history(){const rows=state.data.rows;const dates=[...new Set(rows.map(r
 function settings(){const admin=state.user.role==='admin';const d=state.data;return heading('ABY VŠE FUNGOVALO','Nastavení',admin?'Ranní přehledy a zabezpečení vašeho účtu.':'Přihlašovací údaje a vaše firemní nastavení.')+`<div class="settings-grid">${admin?`<section class="panel form-panel"><h2>Ranní souhrn e-mailem</h2><p>Každý den po 8:00. Konečné počty jídel a rozpis pro firmy.</p><form id="settings-form"><label>E-mail pro ranní souhrn<input type="email" name="reportEmail" placeholder="provoz@vase-restaurace.cz" value="${esc(d.reportEmail)}"></label><div class="notice compact"><span>ⓘ</span><p>${d.emailReady?'E-mailová služba je nakonfigurována.':state.demo?'V místním demu se e-maily neposílají. Souhrny si můžete stáhnout v denním přehledu.':'Pro odesílání je potřeba připojit e-mailovou službu na serveru.'}</p></div><button class="primary">Uložit nastavení</button></form></section>`:`<section class="panel form-panel"><h2>${esc(state.user.name)}</h2><p>${esc(state.user.email)}</p><div class="notice compact"><p>Cenu a typ krabiček vám nastavuje restaurace. Pokud potřebujete změnu, obraťte se na obsluhu Srubu Podkozí.</p></div></section>`}<section class="panel form-panel"><h2>Změna hesla</h2><p>Pro bezpečné přihlášení používejte vlastní heslo.</p><form id="password-form"><label>Současné heslo<input name="current" type="password" required autocomplete="current-password" maxlength="128"></label><label>Nové heslo<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password" placeholder="Alespoň 12 znaků"></label><label>Nové heslo znovu<input name="confirm" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label><button class="secondary">Změnit heslo</button></form></section></div>`;}
 function login(){return `<div class="login-layout"><section class="login-story">${brand()}<div><span class="eyebrow">FIREMNÍ STRAVOVÁNÍ OD SRUBU</span><h1>Dobrý oběd.<br>Každý pracovní den.</h1><p>Poctivá kuchyně z Podkozí.<br>Pro vás a celý váš tým.</p><div class="story-lines">↟ &nbsp; Čerstvě uvařeno &nbsp; · &nbsp; S chutí doručeno</div></div><small>SRUB PODKOZÍ · RODINNÁ RESTAURACE</small></section><section class="login-form"><div class="login-inner"><p class="eyebrow">VÍTEJTE U NÁS</p><h2>Váš oběd začíná tady.</h2><p>Přihlaste se do svého firemního účtu<br>nebo do správy restaurace.</p><form id="login-form"><label>E-mail<input type="email" name="email" placeholder="vas@email.cz" required autocomplete="username"></label><label>Heslo<input type="password" name="password" placeholder="Vaše heslo" required autocomplete="current-password" maxlength="128"></label><button class="primary full">Přihlásit se <span>→</span></button><p class="form-error" role="alert"></p></form>${state.demo?'<div class="demo-box"><span>MÍSTNÍ UKÁZKA APLIKACE</span><p>Prohlédněte si obě strany jednoho oběda.</p><div><button class="secondary" data-demo="company">Vstoupit jako firma →</button><button class="secondary" data-demo="admin">Správa restaurace →</button></div><small>Ukázkové účty a objednávky. E-maily se neodesílají.</small></div>':'<p class="muted">Nemáte přístup nebo jste zapomněli heslo? Obraťte se na správce restaurace.</p>'}<a class="back-site" href="https://www.srubpodkozi.cz/" target="_blank" rel="noreferrer">← Web restaurace Srub Podkozí</a></div></section></div>`;}
 }
-async function render(){const id=++renderId;try{if(!state.user){$('#app').innerHTML=login();return;}const v=state.view;let data;if(v==='menu')data=await api('menu?date='+state.date);if((v==='dashboard'||v==='delivery')&&state.user.role==='company')data=await api('history');else if(v==='dashboard'||v==='companies'||v==='delivery')data=await api('dashboard?date='+state.date);if(v==='orders')data=state.user.role==='admin'?await api(`firm-orders?company=${state.firm||''}&date=${state.date}`):await api('history');if(v==='kitchen')data=await api('dashboard?date='+state.date);if(v==='settings')data=state.user.role==='admin'?await api('settings'):{};if(id!==renderId)return;state.data=data;if(v==='orders'&&state.user.role==='admin')state.firm=data.company?.id;if(v==='menu'){state.quantities=Object.fromEntries(data.orders.map(o=>[o.meal_id,o.quantity]));state.dirty=false;}$('#app').innerHTML=shell(({menu:menuView,dashboard:(state.user.role==='admin'?dashboard:companyOverview),companies,orders:(state.user.role==='admin'?adminOrders:history),kitchen:kitchenSheet,delivery:(state.user.role==='admin'?(globalThis.delivery||dashboard):companyDelivery),settings}[v])());}catch(e){toast(e.message,true);}}
+async function render(){const id=++renderId;try{if(!state.user){$('#app').innerHTML=login();return;}const v=state.view;let data;if(v==='menu')data=await api('menu?date='+state.date);if((v==='dashboard'||v==='delivery')&&state.user.role==='company')data=await api('history');else if(v==='dashboard'||v==='companies'||v==='delivery')data=await api('dashboard?date='+state.date);if(v==='orders')data=state.user.role==='admin'?await api(`firm-orders?company=${state.firm||''}&date=${state.date}`):await api('history');if(v==='kitchen')data=await api('dashboard?date='+state.date);if(v==='settings')data=state.user.role==='admin'?await api('settings'):{};if(v==='orders'&&data&&(state.user.role!=='admin'||data.company)){try{data.payment=await api(`payment?date=${state.date}${state.user.role==='admin'?'&company='+data.company.id:''}`);}catch{data.payment=null;}}if(id!==renderId)return;state.data=data;if(v==='orders'&&state.user.role==='admin')state.firm=data.company?.id;if(v==='menu'){state.quantities=Object.fromEntries(data.orders.map(o=>[o.meal_id,o.quantity]));state.dirty=false;}$('#app').innerHTML=shell(({menu:menuView,dashboard:(state.user.role==='admin'?dashboard:companyOverview),companies,orders:(state.user.role==='admin'?adminOrders:history),kitchen:kitchenSheet,delivery:(state.user.role==='admin'?(globalThis.delivery||dashboard):companyDelivery),settings}[v])());}catch(e){toast(e.message,true);}}
 function canLeave(){return !state.dirty||confirm('Máte neuložené změny objednávky. Opravdu chcete odejít bez uložení?');}
 function openModal(html){const d=$('#modal');d.innerHTML=`<button class="modal-close" aria-label="Zavřít" data-action="close-modal">×</button>${html}<p class="form-error" role="alert"></p>`;d.showModal();}
 function input(label,name,value='',type='text',extra=''){return `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;}
@@ -113,7 +113,7 @@ var history = function(){
  const weekday=new Date(state.date+'T12:00:00Z').getUTCDay(),monday=plus(state.date,-((weekday+6)%7));
  const days=Array.from({length:5},(_,i)=>{const date=plus(monday,i),rows=state.data.rows.filter(r=>r.date===date);return {date,rows,qty:rows.reduce((s,r)=>s+r.quantity,0),sum:rows.reduce((s,r)=>s+r.quantity*(r.price+r.fee),0),locked:date<state.clock.date||(date===state.clock.date&&state.clock.hour>=8),hasMenu:state.data.menuDates?.includes(date)};});
  const totalQty=days.reduce((s,d)=>s+d.qty,0),totalSum=days.reduce((s,d)=>s+d.sum,0),orderedDays=days.filter(d=>d.qty).length;
- return `<section class="delivery-view company-summary"><header class="delivery-view-head"><div><h1>Objednávky</h1><p>Přehled obědů na celý týden.</p></div></header>${simpleWeek(false)}<div class="delivery-view-note"><span>${totalQty}</span><p>${plural(totalQty,'porce','porce','porcí')} na tento týden<br><small>${orderedDays} ${plural(orderedDays,'den','dny','dnů')} s objednávkou</small></p></div><div class="delivery-route">${days.map((d,i)=>{const action=d.qty?`<button class="secondary stop-action" data-open-order="${d.date}">${d.locked?'Zobrazit':'Upravit'}</button>`:(!d.locked&&d.hasMenu?`<button class="primary stop-action" data-open-order="${d.date}">Vybrat jídlo</button>`:'');return `<article class="route-stop ${d.qty?'has-order':''}"><span class="route-number">${i+1}</span><div class="route-stop-main"><div class="stop-head"><h2>${dateLabel(d.date,{weekday:'long',day:'numeric',month:'long'})}</h2>${action}</div>${editNote(state.data.edits,d.date)}${d.qty?`<div class="route-meals">${d.rows.map(r=>`<span><b>${r.quantity}×</b><em>${esc(r.name)}</em><i>${money(r.quantity*(r.price+r.fee))}</i></span>`).join('')}</div><div class="stop-total"><span class="stop-count"><span class="stop-tag">✓ Objednáno</span>${d.qty} ${plural(d.qty,'porce','porce','porcí')}</span><span class="stop-sum">Celkem<b>${money(d.sum)}</b></span></div>`:`<p>${d.locked?'Objednávání na tento den už skončilo.':d.hasMenu?'Vyberte si jídlo do 8:00 v den rozvozu.':'Jakmile restaurace přidá menu, můžete objednávat.'}</p>`}</div></article>`;}).join('')}</div><footer class="admin-orders-total"><span>Celkem za týden<small>${totalQty} ${plural(totalQty,'porce','porce','porcí')} dohromady</small></span><strong>${money(totalSum)}</strong></footer></section>`;
+ return `<section class="delivery-view company-summary"><header class="delivery-view-head"><div><h1>Objednávky</h1><p>Přehled obědů na celý týden.</p></div></header>${simpleWeek(false)}<div class="delivery-view-note"><span>${totalQty}</span><p>${plural(totalQty,'porce','porce','porcí')} na tento týden<br><small>${orderedDays} ${plural(orderedDays,'den','dny','dnů')} s objednávkou</small></p></div><div class="delivery-route">${days.map((d,i)=>{const action=d.qty?`<button class="secondary stop-action" data-open-order="${d.date}">${d.locked?'Zobrazit':'Upravit'}</button>`:(!d.locked&&d.hasMenu?`<button class="primary stop-action" data-open-order="${d.date}">Vybrat jídlo</button>`:'');return `<article class="route-stop ${d.qty?'has-order':''}"><span class="route-number">${i+1}</span><div class="route-stop-main"><div class="stop-head"><h2>${dateLabel(d.date,{weekday:'long',day:'numeric',month:'long'})}</h2>${action}</div>${editNote(state.data.edits,d.date)}${d.qty?`<div class="route-meals">${d.rows.map(r=>`<span><b>${r.quantity}×</b><em>${esc(r.name)}</em><i>${money(r.quantity*(r.price+r.fee))}</i></span>`).join('')}</div><div class="stop-total"><span class="stop-count"><span class="stop-tag">✓ Objednáno</span>${d.qty} ${plural(d.qty,'porce','porce','porcí')}</span><span class="stop-sum">Celkem<b>${money(d.sum)}</b></span></div>`:`<p>${d.locked?'Objednávání na tento den už skončilo.':d.hasMenu?'Vyberte si jídlo do 8:00 v den rozvozu.':'Jakmile restaurace přidá menu, můžete objednávat.'}</p>`}</div></article>`;}).join('')}</div><footer class="admin-orders-total"><span>Celkem za týden<small>${totalQty} ${plural(totalQty,'porce','porce','porcí')} dohromady</small></span><strong>${money(totalSum)}</strong></footer>${payCard(state.data.payment)}</section>`;
 };
 var settings = function(){if(state.user.role==='admin')return adminSettings();return `<div class="simple-title"><h1>Účet</h1></div><section class="panel account-info"><h2>${esc(state.user.name)}</h2><p>${esc(state.user.email)}</p><p>Ceny a krabičky vám nastavuje restaurace.</p><button class="secondary" data-action="logout">Odhlásit se</button></section><details class="panel password-details"><summary>Změnit heslo</summary><form id="password-form">${input('Současné heslo','current','','password','required autocomplete="current-password" maxlength="128"')}${input('Nové heslo','password','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}${input('Nové heslo znovu','confirm','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}<button class="primary">Uložit nové heslo</button></form></details>`;};
 function adminSettings(){const d=state.data;return heading('NASTAVENÍ','Nastavení','Ranní přehledy a zabezpečení účtu.')+`<div class="settings-grid"><section class="panel form-panel"><h2>Ranní souhrn e-mailem</h2><form id="settings-form"><label>E-mail pro ranní souhrn<input type="email" name="reportEmail" value="${esc(d.reportEmail)}"></label><button class="primary">Uložit nastavení</button></form></section></div>`;}
@@ -375,6 +375,12 @@ adminSettings=function(){
   <p>Odchází po ranní uzávěrce v 8:00 na adresu níže. Obsahuje celkový počet porcí, soupis pro kuchyni a rozpis po firmách včetně adresy a typu krabiček.</p>
   <form id="settings-form"><label>E-mail pro ranní souhrn<input type="email" name="reportEmail" value="${esc(d.reportEmail||'')}"></label>
   <div class="set-card-foot"><button class="primary small">Uložit</button></div></form></section>
+ <section class="set-card"><h2>Platby QR kódem</h2>
+  <p>Firmy po skončení týdne (u měsíčního vyúčtování měsíce) uvidí QR kód s přesnou částkou, variabilním symbolem a zprávou „Srub Podkozí – firma – období“. Stačí ho naskenovat v bankovní aplikaci.</p>
+  <div class="state-row ${d.bankIban?'is-open':'is-warn'}"><b>Kč</b><span>Účet pro platby</span><strong>${d.bankIban?esc(d.bankIban):'Nevyplněno'}</strong></div>
+  <form id="bank-form"><label>Číslo účtu nebo IBAN<input name="account" value="${esc(d.bankAccount||'')}" placeholder="123456789/0800" autocomplete="off" inputmode="text"></label>
+  <p class="footnote">Např. 19-123456789/0800 nebo CZ65 0800 0000 1920 0014 5399. Appka číslo účtu zkontroluje. Prázdné pole QR kódy vypne.</p>
+  <div class="set-card-foot"><button class="primary small">Uložit účet</button></div></form></section>
  ${passwordCard()}
  <section class="set-card"><h2>Účet</h2><p>${esc(state.user.name)}</p>
   <div class="set-card-foot"><button class="secondary small" data-action="logout">Odhlásit se</button></div></section>`;
@@ -436,6 +442,12 @@ adminSettings=function(){
   <div class="state-row ${stav[0]}"><b>✉</b><span>Stav odesílání</span><strong>${stav[1]}</strong></div><p class="footnote mail-note">${poznamka}</p>
   <form id="settings-form"><label>E-mail pro ranní souhrn<input type="email" name="reportEmail" value="${esc(d.reportEmail||'')}"></label>
   <div class="set-card-foot"><button class="secondary small" type="button" data-action="test-mail" ${d.smtpReady?'':'disabled'}>Odeslat zkušební e-mail</button><button class="primary small">Uložit</button></div></form></section>
+ <section class="set-card"><h2>Platby QR kódem</h2>
+  <p>Firmy po skončení týdne (u měsíčního vyúčtování měsíce) uvidí QR kód s přesnou částkou, variabilním symbolem a zprávou „Srub Podkozí – firma – období“. Stačí ho naskenovat v bankovní aplikaci.</p>
+  <div class="state-row ${d.bankIban?'is-open':'is-warn'}"><b>Kč</b><span>Účet pro platby</span><strong>${d.bankIban?esc(d.bankIban):'Nevyplněno'}</strong></div>
+  <form id="bank-form"><label>Číslo účtu nebo IBAN<input name="account" value="${esc(d.bankAccount||'')}" placeholder="123456789/0800" autocomplete="off" inputmode="text"></label>
+  <p class="footnote">Např. 19-123456789/0800 nebo CZ65 0800 0000 1920 0014 5399. Appka číslo účtu zkontroluje. Prázdné pole QR kódy vypne.</p>
+  <div class="set-card-foot"><button class="primary small">Uložit účet</button></div></form></section>
  ${passwordCard()}
  <section class="set-card"><h2>Účet</h2><p>${esc(state.user.name)}</p>
   <div class="set-card-foot"><button class="secondary small" data-action="logout">Odhlásit se</button></div></section>`;
@@ -719,11 +731,11 @@ adminOrders=function(){
   return `<section class="delivery-view company-summary firm-orders">${head}${picker}${title}
    <div class="simple-week"><div class="week-switch"><button class="secondary" data-month-shift="-1">←</button><strong>${month.charAt(0).toUpperCase()+month.slice(1)}</strong><button class="secondary" data-month-shift="1">→</button></div></div>
    <div class="month-weeks">${tiles}</div>
-   <footer class="admin-orders-total"><span>Celkem za měsíc<small>${porce(portions(d.rows))} dohromady</small></span><strong>${money(sum(d.rows))}</strong></footer></section>`;
+   <footer class="admin-orders-total"><span>Celkem za měsíc<small>${porce(portions(d.rows))} dohromady</small></span><strong>${money(sum(d.rows))}</strong></footer>${payCard(state.data.payment)}</section>`;
  }
  const days=firmDays(Array.from({length:5},(_,i)=>plus(d.from,i)),d.rows);
  return `<section class="delivery-view company-summary firm-orders">${head}${picker}${title}${simpleWeek(false)}${days}
-  <footer class="admin-orders-total"><span>Celkem za týden<small>${porce(portions(d.rows))} dohromady</small></span><strong>${money(sum(d.rows))}</strong></footer></section>`;
+  <footer class="admin-orders-total"><span>Celkem za týden<small>${porce(portions(d.rows))} dohromady</small></span><strong>${money(sum(d.rows))}</strong></footer>${payCard(state.data.payment)}</section>`;
 };
 
 document.addEventListener('click',async e=>{
@@ -834,3 +846,46 @@ toast=function(message,error=false,ms=4500){
  requestAnimationFrame(()=>card.classList.add('is-in'));
  arm();
 };
+
+
+// Karta platby pod součtem v Objednávkách: částka, variabilní symbol, zpráva, QR kód a stav zaplacení.
+function payCard(p){
+ if(!p||!p.amount)return '';
+ const admin=state.user.role==='admin';
+ const range=p.kind==='week'?` (${dateLabel(p.from,{day:'numeric',month:'numeric'})} – ${dateLabel(p.to,{day:'numeric',month:'numeric'})})`:'';
+ const title=`Platba za ${p.label}${range}`;
+ if(!p.finished)return `<section class="pay-card is-waiting"><div class="pay-head"><h2>${esc(title)}</h2><span class="pay-badge">Probíhá</span></div><p class="pay-note">${admin?'Období ještě neskončilo – částka se může změnit.':'Platbu uhraďte po skončení '+(p.kind==='week'?'týdne':'měsíce')+', až bude částka konečná.'} Zatím ${money(p.amount)}.</p></section>`;
+ const when=p.paid?new Date(p.paid.paid_at).toLocaleString('cs-CZ',{timeZone:'Europe/Prague',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+ const who=p.paid?(p.paid.paid_by==='restaurant'?'restaurace':'firma'):'';
+ const rows=[['Částka',`<b>${money(p.amount)}</b>`],['Variabilní symbol',`<b>${esc(p.vs)}</b>`],['Zpráva pro příjemce',esc(p.message)],['Účet',p.account?esc(p.account):'doplní restaurace']];
+ return `<section class="pay-card ${p.paid?'is-paid':''}">
+  <div class="pay-head"><h2>${esc(title)}</h2>${p.paid?`<span class="pay-badge is-paid">✓ Zaplaceno</span>`:`<span class="pay-badge is-due">K úhradě</span>`}</div>
+  <div class="pay-body">
+   <div class="pay-qr">${p.svg?`<div class="pay-qr-code" role="img" aria-label="QR kód pro platbu ${money(p.amount)}">${p.svg}</div><small>Naskenujte v bankovní aplikaci</small>`:`<div class="pay-qr-missing">QR kód se zobrazí, až restaurace doplní číslo účtu.</div>`}</div>
+   <dl class="pay-details">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+  </div>
+  <div class="pay-foot">${p.paid
+   ?`<span class="pay-paid-note">Označila ${who} ${esc(when)}</span><button type="button" class="secondary small" data-pay-toggle="0">Zrušit označení</button>`
+   :`<span class="pay-paid-note">${admin?'Firma zatím neoznačila platbu.':'Po zaplacení označte, ať to restaurace ví.'}</span><button type="button" class="primary small" data-pay-toggle="1">Označit jako zaplacené</button>`}</div>
+ </section>`;
+}
+document.addEventListener('click',async e=>{
+ const b=e.target.closest('[data-pay-toggle]');if(!b)return;
+ const p=state.data?.payment;if(!p)return;
+ b.disabled=true;
+ try{
+  const paid=b.dataset.payToggle==='1';
+  await api('payment/paid',{date:state.date,paid,company_id:p.company.id});
+  await render();
+  toast(paid?{title:'Označeno jako zaplacené',text:`${p.company.name} · ${p.label} · ${money(p.amount)}`}:{title:'Označení zrušeno',text:`${p.company.name} · ${p.label} je znovu k úhradě.`});
+ }catch(err){b.disabled=false;toast(err.message,true);}
+});
+document.addEventListener('submit',async e=>{
+ const f=e.target;if(f.id!=='bank-form')return;
+ e.preventDefault();const btn=f.querySelector('button');btn.disabled=true;
+ try{
+  const r=await api('settings/bank',{account:f.elements.account.value});
+  await render();
+  toast(r.iban?{title:'Účet uložen',text:`QR platby půjdou na ${r.iban}.`}:{title:'Účet odebrán',text:'QR kódy se firmám nezobrazí, dokud účet znovu nevyplníte.'});
+ }catch(err){btn.disabled=false;toast(err.message,true);}
+});

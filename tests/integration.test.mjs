@@ -56,6 +56,18 @@ test('Přihlášení, role, oddělení firem, objednávky, ceny a revokace pří
   const kept=(await call('menu?date='+date,null,client)).data.orders.find(x=>x.meal_id===m.id);
   assert.equal(kept.quantity,5);assert.equal(kept.price,10000,'cena z objednávky zůstává');
   await call('admin/order',{company_id:clientId,date,items:[{id:m.id,quantity:9}]},admin);
+  // Platba za skončený týden: částka ze skutečných objednávek, firma ji označí, restaurace to vidí.
+  const pay=(await call('payment?date='+past,null,client)).data;
+  assert.equal(pay.finished,true);assert.equal(pay.amount,3*(pastMeals[0].price+pastMeals[0].fee),'částka odpovídá objednávkám týdne');
+  assert.ok(/^\d+$/.test(pay.vs)&&pay.message.startsWith('Srub Podkozi - '),'symbol a zpráva');
+  assert.equal(pay.svg,null,'bez účtu restaurace není QR');
+  assert.equal((await call('settings/bank',{account:'19-2000145398/0800'},admin)).status,400,'neplatný účet se neuloží');
+  assert.equal((await call('settings/bank',{account:'19-2000145399/0800'},admin)).status,200);
+  assert.ok((await call('payment?date='+past,null,client)).data.svg.startsWith('<svg'),'s účtem je QR');
+  assert.equal((await call('payment/paid',{date,paid:true},client)).status,400,'neskončené období nejde označit');
+  assert.equal((await call('payment/paid',{date:past,paid:true},client)).status,200);
+  assert.equal((await call(`payment?company=${clientId}&date=${past}`,null,admin)).data.paid.paid_by,'company','restaurace vidí, že firma zaplatila');
+  assert.equal((await call('settings/bank',{account:'1'},client)).status,403,'firma nemůže měnit účet restaurace');
   assert.equal((await call('companies',{name:'Test s.r.o.',email:'new@example.cz',address:'Chyňava',price:'',soup_price:'',packaging:'own',fee:0,password:'MyNewPassword123'},admin)).status,200);
   const newCookie=(await call('login',{email:'new@example.cz',password:'MyNewPassword123'})).cookie;
   assert.ok(newCookie);assert.equal((await call('history',null,newCookie)).data.rows.length,0);

@@ -8,6 +8,8 @@ import {pragueNow,closed,validDate,money,portionPrice,dayAfter} from './domain.m
 import {smtpConfig,sendMail} from './lib/mailer.mjs';
 import {reportHtml} from './lib/report-grid.mjs';
 import {kitchenWorkbook} from './lib/kitchen-xlsx.mjs';
+import {toIban,formatIban,periodFor,variableSymbol,paymentMessage,spdString} from './lib/payment.mjs';
+import QRCode from 'qrcode';
 import {readMenuFile,reviewMeals,detectWeek,LIMITS} from './lib/menu-import.mjs';
 // Jídla dne i s pořadím hlavního jídla (M1–M4); polévka má slot 0.
 const SQL_MEALS_WITH_SLOT="SELECT *,CASE WHEN category='Polévka' THEN 0 ELSE ROW_NUMBER() OVER (PARTITION BY category='Polévka' ORDER BY id) END AS slot FROM meals WHERE date=? ORDER BY id";
@@ -35,6 +37,7 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS reports(date TEXT PRIMARY KEY,body TEXT NOT NULL,status TEXT NOT NULL,created TEXT NOT NULL,sent TEXT,error TEXT);
  CREATE TABLE IF NOT EXISTS login_attempts(key TEXT PRIMARY KEY,count INTEGER NOT NULL,until INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS payments(company_id INTEGER NOT NULL,period TEXT NOT NULL,paid_at TEXT NOT NULL,paid_by TEXT NOT NULL,PRIMARY KEY(company_id,period));
  CREATE TABLE IF NOT EXISTS order_edits(company_id INTEGER NOT NULL,date TEXT NOT NULL,edited_at TEXT NOT NULL,PRIMARY KEY(company_id,date));
 `);
 for(const n of [1,2,3,4])addColumnIfMissing('companies',`price_m${n}`,'INTEGER');
@@ -132,6 +135,15 @@ if(demo){
 }
 function session(req){const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('srub_session='))?.slice(13);if(!raw)return null;const token=createHash('sha256').update(raw).digest('hex');return get(`SELECT u.id,u.email,u.role,u.company_id,COALESCE(c.name,'Restaurace Srub Podkozí') name FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN companies c ON c.id=u.company_id WHERE s.token=? AND s.expires>? AND (u.role='admin' OR c.active=1)`,token,Date.now());}
 function rowsFor(date,company){return all(`SELECT o.*,m.name,m.description,m.date,m.category,c.name company,c.address FROM orders o JOIN meals m ON m.id=o.meal_id JOIN companies c ON c.id=o.company_id WHERE m.date=? ${company?'AND o.company_id=?':''} ORDER BY c.name,m.id`,...company?[date,company]:[date]);}
+async function paymentFor(c,date){
+ const p=periodFor(date,c.billing);
+ const amount=get('SELECT COALESCE(SUM(o.quantity*(o.price+o.fee)),0) total FROM orders o JOIN meals m ON m.id=o.meal_id WHERE o.company_id=? AND m.date BETWEEN ? AND ?',c.id,p.from,p.to).total;
+ const finished=closed(p.to);
+ const vs=variableSymbol(c.id,p),message=paymentMessage(c.name,p),iban=setting('bankIban');
+ const svg=finished&&amount>0&&iban?await QRCode.toString(spdString({iban,amount,vs,message}),{type:'svg',errorCorrectionLevel:'M',margin:1,color:{dark:'#231f18',light:'#ffffff'}}):null;
+ const paid=get('SELECT paid_at,paid_by FROM payments WHERE company_id=? AND period=?',c.id,p.period)||null;
+ return {company:{id:c.id,name:c.name},period:p.period,kind:p.kind,label:p.label,from:p.from,to:p.to,finished,amount,vs,message,account:iban?formatIban(iban):'',svg,paid};
+}
 function summary(date){const rows=rowsFor(date);return {date,rows,total:rows.reduce((s,r)=>s+r.quantity,0),firms:new Set(rows.map(r=>r.company_id)).size};}
 // Pondělí až pátek toho týdne, do kterého datum spadá.
 function weekDates0(date){
@@ -222,6 +234,21 @@ const server=http.createServer(async(req,res)=>{
      else run('INSERT INTO orders VALUES(?,?,?,?,?,?,?) ON CONFLICT(company_id,meal_id) DO UPDATE SET quantity=excluded.quantity,updated=excluded.updated',c.id,m.id,item.quantity,portionPrice(m,c),c.fee,c.packaging,new Date().toISOString());
     }
    });return send(200,{ok:true});
+  }
+  if(path==='/api/payment'&&req.method==='GET'){
+   const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');
+   const c=get('SELECT * FROM companies WHERE id=?',user.role==='admin'?Number(url.searchParams.get('company')):user.company_id);if(!c)throw new Error('Firma neexistuje.');
+   return send(200,await paymentFor(c,date));
+  }
+  if(path==='/api/payment/paid'&&req.method==='POST'){
+   if(!validDate(body.date))throw new Error('Neplatné datum.');
+   const c=get('SELECT * FROM companies WHERE id=?',user.role==='admin'?Number(body.company_id):user.company_id);if(!c)throw new Error('Firma neexistuje.');
+   const p=await paymentFor(c,body.date);
+   if(!p.finished)throw new Error('Za období, které ještě neskončilo, se zatím neplatí.');
+   if(!p.amount)throw new Error('Za toto období není co platit.');
+   if(body.paid)run('INSERT INTO payments VALUES(?,?,?,?) ON CONFLICT(company_id,period) DO UPDATE SET paid_at=excluded.paid_at,paid_by=excluded.paid_by',c.id,p.period,new Date().toISOString(),user.role==='admin'?'restaurant':'company');
+   else run('DELETE FROM payments WHERE company_id=? AND period=?',c.id,p.period);
+   return send(200,{ok:true});
   }
   if(user.role!=='admin')return send(403,{error:'Tato část je dostupná pouze restauraci.'});
   if(path==='/api/firm-orders'&&req.method==='GET'){
@@ -347,7 +374,12 @@ const server=http.createServer(async(req,res)=>{
    return send(200,{ok:true,saved:meals.length,from:dates[0],to:dates[dates.length-1],days:dates.length,companies:get('SELECT COUNT(*) n FROM companies WHERE active=1').n});
   }
   if(path==='/api/meals/delete'&&req.method==='POST'){const m=get('SELECT * FROM meals WHERE id=?',body.id);if(!m||closed(m.date))throw new Error('Toto jídlo nelze odstranit.');if(get('SELECT 1 FROM orders WHERE meal_id=?',m.id))throw new Error('Jídlo už má objednávky a nelze je odstranit.');run('DELETE FROM meals WHERE id=?',m.id);return send(200,{ok:true});}
-  if(path==='/api/settings'&&req.method==='GET')return send(200,{reportEmail:setting('reportEmail'),emailReady:!demo&&Boolean(smtpConfig()),smtpReady:Boolean(smtpConfig()),demo});
+  if(path==='/api/settings/bank'&&req.method==='POST'){
+   const input=String(body.account||'').trim();
+   if(!input){set('bankIban','');set('bankAccount','');return send(200,{ok:true,iban:''});}
+   const iban=toIban(input);set('bankIban',iban);set('bankAccount',input);return send(200,{ok:true,iban:formatIban(iban)});
+  }
+  if(path==='/api/settings'&&req.method==='GET')return send(200,{bankAccount:setting('bankAccount'),bankIban:setting('bankIban')?formatIban(setting('bankIban')):'',reportEmail:setting('reportEmail'),emailReady:!demo&&Boolean(smtpConfig()),smtpReady:Boolean(smtpConfig()),demo});
   if(path==='/api/settings'&&req.method==='POST'){set('reportEmail',body.reportEmail?email(body.reportEmail):'');return send(200,{ok:true});}
   if(path==='/api/report'&&req.method==='GET'){const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');const book=await kitchenWorkbook(date,summary(date).rows);return send(200,book,{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':`attachment; filename="kuchynsky-list-${date}.xlsx"`});}
   return send(404,{error:'Požadavek neexistuje.'});
