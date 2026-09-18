@@ -811,3 +811,6 @@ html{scrollbar-gutter:stable}
 .pay-paid-note{color:#776b58;font-size:13px;font-weight:600}
 .pay-card.is-paid .pay-paid-note{color:#2f6b37}
 @media (max-width:520px){.pay-body{grid-template-columns:1fr;justify-items:center}.pay-details{width:100%}.pay-qr-code,.pay-qr-missing{width:210px;height:210px}.pay-foot button{width:100%}}
+
+/* Pruh „Celkem za týden / měsíc / všechny firmy“ stejně široký jako karty nad ním i platba pod ním – na všech šířkách */
+.admin-orders-total{width:auto!important;max-width:none!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box}
