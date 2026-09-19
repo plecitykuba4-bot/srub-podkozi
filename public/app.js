@@ -857,7 +857,7 @@ function payCard(p){
  if(!p.finished)return `<section class="pay-card is-waiting"><div class="pay-head"><h2>${esc(title)}</h2><span class="pay-badge">Probíhá</span></div><p class="pay-note">${admin?'Období ještě neskončilo – částka se může změnit.':'Platbu uhraďte po skončení '+(p.kind==='week'?'týdne':'měsíce')+', až bude částka konečná.'} Zatím ${money(p.amount)}.</p></section>`;
  const when=p.paid?new Date(p.paid.paid_at).toLocaleString('cs-CZ',{timeZone:'Europe/Prague',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}):'';
  const who=p.paid?(p.paid.paid_by==='restaurant'?'restaurace':'firma'):'';
- const rows=[['Částka',`<b>${money(p.amount)}</b>`],['Variabilní symbol',`<b>${esc(p.vs)}</b>`],['Zpráva pro příjemce',esc(p.message)],['Účet',p.account?esc(p.account):'doplní restaurace']];
+ const rows=[['Částka',`<b>${money(p.amount)}</b>`],['Variabilní symbol',`<b>${esc(p.vs)}</b>`],['Zpráva pro příjemce',esc(p.message)],['Účet',p.account?esc(p.account):'------']];
  return `<section class="pay-card ${p.paid?'is-paid':''}">
   <div class="pay-head"><h2>${esc(title)}</h2>${p.paid?`<span class="pay-badge is-paid">✓ Zaplaceno</span>`:`<span class="pay-badge is-due">K úhradě</span>`}</div>
   <div class="pay-body">
