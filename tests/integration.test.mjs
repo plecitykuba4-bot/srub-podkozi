@@ -42,7 +42,9 @@ test('Přihlášení, role, oddělení firem, objednávky, ceny a revokace pří
   await call('order',{date,items:[{id:m.id,quantity:9}]},client);
   assert.equal((await call('menu?date='+date,null,client)).data.orders.find(x=>x.meal_id===m.id).price,10000,'nová objednávka jede za novou cenu');
   // Restaurace upraví objednávku za firmu i v uzavřeném minulém dni; firma sama nesmí.
-  const past=dayAfter(pragueNow().date,-((new Date(pragueNow().date+'T12:00:00Z').getUTCDay()+6)%7)-7);
+  // Týden před tím, na který demo posune uložené menu (o víkendu je to už příští týden) – má jídelníček a je uzavřený.
+  const wd=new Date(pragueNow().date+'T12:00:00Z').getUTCDay();
+  const past=dayAfter(pragueNow().date,(wd===6?2:wd===0?1:1-wd)-7);
   const pastMeals=(await call(`admin/order?company=${clientId}&date=${past}`,null,admin)).data.meals;
   assert.ok(pastMeals.length>0,'minulý týden má jídelníček');
   assert.equal((await call('admin/order',{company_id:clientId,date:past,items:[{id:pastMeals[0].id,quantity:3}]},client)).status,403,'firma nesmí upravovat za restauraci');
