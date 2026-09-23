@@ -384,7 +384,7 @@ const server=http.createServer(async(req,res)=>{
       run('UPDATE orders SET price=?,fee=?,packaging=? WHERE company_id=? AND meal_id=?',portionPrice(meal,firm),firm.fee,firm.packaging,body.id,meal.id);}if(body.password){run('UPDATE users SET password=? WHERE company_id=?',hash(password(body.password)),body.id);run('DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE company_id=?)',body.id);}}
     else{const h=hash(password(body.password));const id=run('INSERT INTO companies(name,email,address,price,price_m1,price_m2,price_m3,price_m4,soup_price,packaging,fee) VALUES(?,?,?,?,?,?,?,?,?,?,?)',c.name,c.email,c.address,c.price,c.price_m1,c.price_m2,c.price_m3,c.price_m4,c.soup_price,c.packaging,c.fee).lastInsertRowid;run('INSERT INTO users(email,password,role,company_id) VALUES(?,?,?,?)',c.email,h,'company',id);}
     run('UPDATE companies SET soup_price=? WHERE email=?',body.soup_price===''||body.soup_price==null?null:money(body.soup_price),c.email);
-    run('UPDATE companies SET billing=? WHERE email=?',body.billing==='month'?'month':'week',c.email);
+    if(body.billing==='month'||body.billing==='week')run('UPDATE companies SET billing=? WHERE email=?',body.billing,c.email);
     if(body.id&&body.active===false)run('DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE company_id=?)',body.id);
    });return send(200,{ok:true});
   }

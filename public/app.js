@@ -537,6 +537,10 @@ companyModal=function(id){
   ${choice('Typ krabiček','packaging',[['own','Vlastní krabičky'],['disposable','Jednorázové krabičky']],pack)}
   <div class="fee-field" ${pack==='own'?'hidden':''}>${input('Příplatek za krabičku (Kč)','fee',(id?(c.fee||0):1000)/100,'number','min="0" max="10000" step="1"')}</div>
  </fieldset>
+ <fieldset class="form-group"><legend>Vyúčtování</legend>
+  ${choice('Jak se firmě účtuje','billing',[['week','Týdně'],['month','Měsíčně']],c.billing==='month'?'month':'week')}
+  <p class="footnote">Týdně: platba za každý týden po–pá. Měsíčně: jedna platba za celý kalendářní měsíc.</p>
+ </fieldset>
  ${id?`<label class="checkbox"><input name="active" type="checkbox" ${c.active?'checked':''}>Účet firmy je aktivní</label>`:''}
  <button class="primary full">${id?'Uložit firmu':'Vytvořit firemní účet'}</button></form>`);
 };
