@@ -133,7 +133,7 @@ if(demo){
   set('demoFirmsSeeded','1');}
  });
 }
-function session(req){const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('srub_session='))?.slice(13);if(!raw)return null;const token=createHash('sha256').update(raw).digest('hex');return get(`SELECT u.id,u.email,u.role,u.company_id,COALESCE(c.name,'Restaurace Srub Podkozí') name FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN companies c ON c.id=u.company_id WHERE s.token=? AND s.expires>? AND (u.role='admin' OR c.active=1)`,token,Date.now());}
+function session(req){const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('srub_session='))?.slice(13);if(!raw)return null;const token=createHash('sha256').update(raw).digest('hex');return get(`SELECT u.id,u.email,u.role,u.company_id,COALESCE(c.name,CASE u.role WHEN 'owner' THEN 'Tichý přehled' ELSE 'Restaurace Srub Podkozí' END) name FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN companies c ON c.id=u.company_id WHERE s.token=? AND s.expires>? AND (u.role IN ('admin','owner') OR c.active=1)`,token,Date.now());}
 function rowsFor(date,company){return all(`SELECT o.*,m.name,m.description,m.date,m.category,c.name company,c.address FROM orders o JOIN meals m ON m.id=o.meal_id JOIN companies c ON c.id=o.company_id WHERE m.date=? ${company?'AND o.company_id=?':''} ORDER BY c.name,m.id`,...company?[date,company]:[date]);}
 async function paymentFor(c,date){
  const p=periodFor(date,c.billing);
@@ -216,6 +216,31 @@ const server=http.createServer(async(req,res)=>{
   if(!user)return send(401,{error:'Přihlaste se prosím.'});
   if(path==='/api/logout'&&req.method==='POST'){const token=(req.headers.cookie||'').match(/srub_session=([^;]+)/)?.[1]||'';run('DELETE FROM sessions WHERE token=?',createHash('sha256').update(token).digest('hex'));return send(200,{ok:true},{'Set-Cookie':'srub_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});}
   if(path==='/api/password'&&req.method==='POST'){const u=get('SELECT * FROM users WHERE id=?',user.id);if(!verify(String(body.current||''),u.password))return send(400,{error:'Současné heslo nesouhlasí.'});run('UPDATE users SET password=? WHERE id=?',hash(password(body.password)),user.id);run('DELETE FROM sessions WHERE user_id=?',user.id);return send(200,{ok:true});}
+  if(user.role==='owner'){
+   const readable=['/api/me','/api/menu','/api/history','/api/dashboard','/api/firm-orders','/api/payment','/api/report','/api/owner-summary'];
+   const allowed=req.method==='GET'?readable.includes(path):['/api/logout','/api/password'].includes(path);
+   if(!allowed)return send(403,{error:'Tento účet slouží jen ke sledování čísel.'});
+  }
+  // Souhrn tržeb pro tichý majitelský účet i pro restauraci.
+  if(path==='/api/owner-summary'&&req.method==='GET'&&(user.role==='owner'||user.role==='admin')){
+   const today=pragueNow().date, d=new Date(today+'T12:00:00Z');
+   const monday=dayAfter(today,-((d.getUTCDay()+6)%7));
+   const monthFrom=today.slice(0,8)+'01', yearFrom=today.slice(0,4)+'-01-01';
+   const sum=(from,to)=>get('SELECT COALESCE(SUM(o.quantity),0) porce,COALESCE(SUM(o.quantity*(o.price+o.fee)),0) trzba FROM orders o JOIN meals m ON m.id=o.meal_id WHERE m.date BETWEEN ? AND ?',from,to);
+   const months=all("SELECT substr(m.date,1,7) mesic,SUM(o.quantity) porce,SUM(o.quantity*(o.price+o.fee)) trzba FROM orders o JOIN meals m ON m.id=o.meal_id GROUP BY mesic ORDER BY mesic DESC LIMIT 6");
+   const firms=all('SELECT c.id,c.name,c.billing,COALESCE(SUM(o.quantity),0) porce,COALESCE(SUM(o.quantity*(o.price+o.fee)),0) trzba FROM companies c LEFT JOIN orders o ON o.company_id=c.id LEFT JOIN meals m ON m.id=o.meal_id AND m.date BETWEEN ? AND ? GROUP BY c.id ORDER BY trzba DESC,c.name',monthFrom,today.slice(0,8)+'31');
+   const unpaid=[];
+   for(const c of all('SELECT * FROM companies WHERE active=1')){
+    const dates=all('SELECT DISTINCT m.date d FROM orders o JOIN meals m ON m.id=o.meal_id WHERE o.company_id=? ORDER BY d',c.id).map(x=>x.d);
+    const done=new Set();
+    for(const date of dates){const p=periodFor(date,c.billing);if(done.has(p.period)||!closed(p.to))continue;done.add(p.period);
+     if(get('SELECT 1 FROM payments WHERE company_id=? AND period=?',c.id,p.period))continue;
+     const a=get('SELECT COALESCE(SUM(o.quantity*(o.price+o.fee)),0) t FROM orders o JOIN meals m ON m.id=o.meal_id WHERE o.company_id=? AND m.date BETWEEN ? AND ?',c.id,p.from,p.to).t;
+     if(a>0)unpaid.push({company:c.name,label:p.label,from:p.from,amount:a});}
+   }
+   unpaid.sort((a,b)=>a.from<b.from?-1:1);
+   return send(200,{today,dnes:sum(today,today),tyden:sum(monday,dayAfter(monday,4)),mesic:sum(monthFrom,today.slice(0,8)+'31'),rok:sum(yearFrom,today.slice(0,4)+'-12-31'),months,firms,unpaid,firmCount:all('SELECT id FROM companies WHERE active=1').length});
+  }
   if(path==='/api/menu'&&req.method==='GET'){
    const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');
    const company=user.role==='company'?get('SELECT * FROM companies WHERE id=?',user.company_id):null;
@@ -237,12 +262,12 @@ const server=http.createServer(async(req,res)=>{
   }
   if(path==='/api/payment'&&req.method==='GET'){
    const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');
-   const c=get('SELECT * FROM companies WHERE id=?',user.role==='admin'?Number(url.searchParams.get('company')):user.company_id);if(!c)throw new Error('Firma neexistuje.');
+   const c=get('SELECT * FROM companies WHERE id=?',user.role==='company'?user.company_id:Number(url.searchParams.get('company')));if(!c)throw new Error('Firma neexistuje.');
    return send(200,await paymentFor(c,date));
   }
   if(path==='/api/payment/qr.png'&&req.method==='GET'){
    const date=url.searchParams.get('date')||'';if(!validDate(date))throw new Error('Neplatné datum.');
-   const c=get('SELECT * FROM companies WHERE id=?',user.role==='admin'?Number(url.searchParams.get('company')):user.company_id);if(!c)throw new Error('Firma neexistuje.');
+   const c=get('SELECT * FROM companies WHERE id=?',user.role==='company'?user.company_id:Number(url.searchParams.get('company')));if(!c)throw new Error('Firma neexistuje.');
    const p=await paymentFor(c,date);const iban=setting('bankIban');
    if(!p.finished||!p.amount||!iban)throw new Error('QR kód pro toto období zatím není k dispozici.');
    const png=await QRCode.toBuffer(spdString({iban,amount:p.amount,vs:p.vs,message:p.message}),{type:'png',errorCorrectionLevel:'M',margin:4,width:900,color:{dark:'#000000',light:'#ffffff'}});
@@ -259,7 +284,7 @@ const server=http.createServer(async(req,res)=>{
    else run('DELETE FROM payments WHERE company_id=? AND period=?',c.id,p.period);
    return send(200,{ok:true});
   }
-  if(user.role!=='admin')return send(403,{error:'Tato část je dostupná pouze restauraci.'});
+  if(user.role!=='admin'&&user.role!=='owner')return send(403,{error:'Tato část je dostupná pouze restauraci.'});
   if(path==='/api/firm-orders'&&req.method==='GET'){
    const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');
    const companies=all("SELECT id,name,packaging,fee,billing,active FROM companies ORDER BY billing='month' DESC,name");

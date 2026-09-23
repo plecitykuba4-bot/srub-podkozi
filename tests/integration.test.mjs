@@ -70,6 +70,20 @@ test('Přihlášení, role, oddělení firem, objednávky, ceny a revokace pří
   assert.equal((await call('payment/paid',{date:past,paid:true},client)).status,200);
   assert.equal((await call(`payment?company=${clientId}&date=${past}`,null,admin)).data.paid.paid_by,'company','restaurace vidí, že firma zaplatila');
   assert.equal((await call('settings/bank',{account:'1'},client)).status,403,'firma nemůže měnit účet restaurace');
+  // Tichý majitelský účet: vidí čísla, ale nic nezmění. Zakládá se přímo v databázi, appka na něj tlačítko nemá.
+  {const {DatabaseSync}=await import('node:sqlite');const {randomBytes,scryptSync}=await import('node:crypto');
+   const db=new DatabaseSync(join(dir,'srub.sqlite'));const salt=randomBytes(16).toString('hex');
+   db.prepare('INSERT INTO users(email,password,role) VALUES(?,?,?)').run('duch@test.local',salt+':'+scryptSync('DuchTajneHeslo123',salt,64).toString('hex'),'owner');
+   db.close();}
+  const ghost=(await call('login',{email:'duch@test.local',password:'DuchTajneHeslo123'})).cookie;
+  assert.ok(ghost,'duch se přihlásí');
+  const souhrn=(await call('owner-summary',null,ghost)).data;
+  assert.ok(souhrn.mesic.trzba>0&&souhrn.firms.length>0,'duch vidí tržby i firmy');
+  assert.equal((await call('dashboard',null,ghost)).status,200);
+  assert.equal((await call(`payment?company=${clientId}&date=${past}`,null,ghost)).status,200);
+  for(const [cesta,data] of [['admin/order',{company_id:clientId,date,items:[]}],['companies',{name:'X'}],['settings/bank',{account:'1'}],['payment/paid',{date:past,paid:false}],['order',{date,items:[]}]])
+    assert.equal((await call(cesta,data,ghost)).status,403,`duch nesmí ${cesta}`);
+  assert.equal((await call('owner-summary',null,client)).status,403,'firma souhrn tržeb nevidí');
   assert.equal((await call('companies',{name:'Test s.r.o.',email:'new@example.cz',address:'Chyňava',price:'',soup_price:'',packaging:'own',fee:0,password:'MyNewPassword123'},admin)).status,200);
   const newCookie=(await call('login',{email:'new@example.cz',password:'MyNewPassword123'})).cookie;
   assert.ok(newCookie);assert.equal((await call('history',null,newCookie)).data.rows.length,0);

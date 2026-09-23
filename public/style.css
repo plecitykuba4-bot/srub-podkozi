@@ -819,3 +819,26 @@ html{scrollbar-gutter:stable}
 .pay-qr .pay-save{margin-top:6px;min-width:176px;height:38px;min-height:38px;border-radius:10px;font-weight:700}
 .pay-qr .pay-save-hint{max-width:190px;color:#8b7f6c;font-size:11px;line-height:1.35;text-align:center}
 @media (max-width:520px){.pay-qr .pay-save{min-width:210px;height:44px;min-height:44px}.pay-qr .pay-save-hint{max-width:230px}}
+
+/* Tichý majitelský účet: jen čte, proto se mu skryjí všechny ovládací prvky */
+.is-owner [data-admin-edit],.is-owner [data-pay-toggle],.is-owner [data-pay-save],.is-owner [data-action="import"],.is-owner [data-action="new-meal"],.is-owner [data-edit-meal],.is-owner [data-order-meal],.is-owner [data-action="new-company"],.is-owner [data-view="companies"],.is-owner [data-action="test-mail"],.is-owner #settings-form,.is-owner #bank-form,.is-owner .simple-actions,.is-owner .ks-actions,.is-owner .simple-meal-action button{display:none!important}
+
+/* Přehled tržeb */
+.own-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0 18px}
+.own-stat{display:flex;flex-direction:column;gap:2px;padding:14px;border:1px solid #f1d795;border-radius:16px;background:#fffaf0}
+.own-stat span{color:#a96c00;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.own-stat strong{color:#231f18;font-size:24px;font-weight:800;letter-spacing:-.5px}
+.own-stat small{color:#776b58;font-size:12px;font-weight:600}
+.own-months{display:grid;gap:8px;margin:10px 0 0}
+.own-months div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px dashed #eee2cf}
+.own-months dt{color:#231f18;font-size:14px;font-weight:700;text-transform:capitalize}
+.own-months dd{margin:0;display:flex;align-items:baseline;gap:8px}
+.own-months dd b{font-size:16px;font-weight:800}
+.own-months dd small,.own-firms small{color:#776b58;font-size:12px;font-weight:600}
+.own-unpaid,.own-firms{display:grid;gap:8px;margin-top:10px}
+.own-unpaid article,.own-firms article{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #eee2cf;border-radius:12px;background:#fff}
+.own-unpaid article{border-color:#f1c9bc;background:#fff8f5}
+.own-unpaid span,.own-firms span{display:flex;flex-direction:column;gap:1px;color:#231f18;font-size:14px;font-weight:700;min-width:0}
+.own-unpaid span small,.own-firms span small{font-weight:600}
+.own-unpaid strong,.own-firms strong{font-size:16px;font-weight:800;white-space:nowrap}
+.own-firms article.is-empty{opacity:.55}
