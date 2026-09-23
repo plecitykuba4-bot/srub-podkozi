@@ -929,7 +929,6 @@ function ownerDashboard(){
  return `<div class="simple-title"><h1>Přehled tržeb</h1><p>Jen pro vás. Nikde jinde se tento účet neukazuje.</p></div>
  <div class="own-stats">${box('Dnes',d.dnes||{})}${box('Tento týden',d.tyden||{})}${box('Tento měsíc',d.mesic||{})}${box('Letos',d.rok||{},(d.firmCount||0)+' '+plural(d.firmCount||0,'firma','firmy','firem'))}</div>
  <section class="set-card"><h2>Poslední měsíce</h2><dl class="own-months">${(d.months||[]).map(mesic).join('')||'<p class="photo-empty">Zatím žádné objednávky.</p>'}</dl></section>
- <section class="set-card"><h2>Nezaplacená období</h2>${(d.unpaid||[]).length?`<div class="own-unpaid">${d.unpaid.map(u=>`<article><span>${esc(u.company)}<small>${esc(u.label)}</small></span><strong>${money(u.amount)}</strong></article>`).join('')}</div><p class="footnote">Stav plateb označují firmy samy v Objednávkách.</p>`:'<p class="photo-empty">Vše zaplacené.</p>'}</section>
  <section class="set-card"><h2>Firmy tento měsíc</h2><div class="own-firms">${(d.firms||[]).map(firma).join('')||'<p class="photo-empty">Zatím žádné objednávky.</p>'}</div></section>`;
 }
 

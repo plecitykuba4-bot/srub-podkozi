@@ -265,17 +265,7 @@ const server=http.createServer(async(req,res)=>{
    const sum=(from,to)=>get('SELECT COALESCE(SUM(o.quantity),0) porce,COALESCE(SUM(o.quantity*(o.price+o.fee)),0) trzba FROM orders o JOIN meals m ON m.id=o.meal_id WHERE m.date BETWEEN ? AND ?',from,to);
    const months=all("SELECT substr(m.date,1,7) mesic,SUM(o.quantity) porce,SUM(o.quantity*(o.price+o.fee)) trzba FROM orders o JOIN meals m ON m.id=o.meal_id GROUP BY mesic ORDER BY mesic DESC LIMIT 6");
    const firms=all('SELECT c.id,c.name,c.billing,COALESCE(SUM(o.quantity),0) porce,COALESCE(SUM(o.quantity*(o.price+o.fee)),0) trzba FROM companies c LEFT JOIN orders o ON o.company_id=c.id LEFT JOIN meals m ON m.id=o.meal_id AND m.date BETWEEN ? AND ? GROUP BY c.id ORDER BY trzba DESC,c.name',monthFrom,today.slice(0,8)+'31');
-   const unpaid=[];
-   for(const c of all('SELECT * FROM companies WHERE active=1')){
-    const dates=all('SELECT DISTINCT m.date d FROM orders o JOIN meals m ON m.id=o.meal_id WHERE o.company_id=? ORDER BY d',c.id).map(x=>x.d);
-    const done=new Set();
-    for(const date of dates){const p=periodFor(date,c.billing);if(done.has(p.period)||!closed(p.to))continue;done.add(p.period);
-     if(get('SELECT 1 FROM payments WHERE company_id=? AND period=?',c.id,p.period))continue;
-     const a=get('SELECT COALESCE(SUM(o.quantity*(o.price+o.fee)),0) t FROM orders o JOIN meals m ON m.id=o.meal_id WHERE o.company_id=? AND m.date BETWEEN ? AND ?',c.id,p.from,p.to).t;
-     if(a>0)unpaid.push({company:c.name,label:p.label,from:p.from,amount:a});}
-   }
-   unpaid.sort((a,b)=>a.from<b.from?-1:1);
-   return send(200,{today,dnes:sum(today,today),tyden:sum(monday,dayAfter(monday,4)),mesic:sum(monthFrom,today.slice(0,8)+'31'),rok:sum(yearFrom,today.slice(0,4)+'-12-31'),months,firms,unpaid,firmCount:all('SELECT id FROM companies WHERE active=1').length});
+   return send(200,{today,dnes:sum(today,today),tyden:sum(monday,dayAfter(monday,4)),mesic:sum(monthFrom,today.slice(0,8)+'31'),rok:sum(yearFrom,today.slice(0,4)+'-12-31'),months,firms,firmCount:all('SELECT id FROM companies WHERE active=1').length});
   }
   if(path==='/api/menu'&&req.method==='GET'){
    const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');
