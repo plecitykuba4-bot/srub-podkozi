@@ -324,7 +324,7 @@ companies=function(){
  const firms=all.filter(c=>(c.name+' '+c.email).toLowerCase().includes(term));
  const group=(pack,title)=>{
   const list=firms.filter(c=>c.packaging===pack);
-  return `<section class="company-overview-list"><h2>${title} <small>${list.length}</small></h2>
+  return `<section class="company-overview-list"><h2>${title} (${list.length} ${plural(list.length,'firma','firmy','firem')})</h2>
    ${list.map(c=>`<div><b>${esc(c.name.slice(0,2).toUpperCase())}</b><span>${esc(c.name)}<small>${c.active?esc(c.email):'Pozastavená · '+esc(c.email)}</small></span>
     <span class="firm-actions"><button class="secondary small" data-edit-company="${c.id}">Upravit</button><button class="secondary small danger" data-remove-company="${c.id}">Odebrat</button></span></div>`).join('')||'<p class="photo-empty">Žádná firma.</p>'}</section>`;};
  return `<div class="simple-title"><h1>Firmy</h1><p>${all.length} ${plural(all.length,'firma','firmy','firem')} celkem.</p></div>
