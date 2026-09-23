@@ -842,3 +842,7 @@ html{scrollbar-gutter:stable}
 .own-unpaid span small,.own-firms span small{font-weight:600}
 .own-unpaid strong,.own-firms strong{font-size:16px;font-weight:800;white-space:nowrap}
 .own-firms article.is-empty{opacity:.55}
+
+/* Odkaz na obnovu zapomenutého hesla pod přihlašovacím formulářem */
+.login-forgot{display:block;width:100%;margin:10px 0 0;padding:6px 0;background:none;border:0;color:#a96c00;font-size:13px;font-weight:700;text-align:center;cursor:pointer}
+.login-forgot:hover{text-decoration:underline}

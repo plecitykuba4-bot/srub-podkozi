@@ -674,6 +674,7 @@ login=function(){
   <button class="primary full">Přihlásit se</button>
   <p class="form-error" role="alert"></p>
  </form>
+ <button type="button" class="text-button login-forgot" data-action="forgot">Zapomenuté heslo</button>
  ${state.demo?`<section class="login-demo"><strong>Vyzkoušet bez přihlášení</strong><p>Ukázková data. E-maily se neodesílají.</p>
   <div class="login-demo-choices"><button class="secondary" data-demo="company">Pohled firmy</button><button class="secondary" data-demo="admin">Správa restaurace</button></div></section>`:''}
  </section></main>`;
@@ -930,4 +931,56 @@ function ownerDashboard(){
  <section class="set-card"><h2>Poslední měsíce</h2><dl class="own-months">${(d.months||[]).map(mesic).join('')||'<p class="photo-empty">Zatím žádné objednávky.</p>'}</dl></section>
  <section class="set-card"><h2>Nezaplacená období</h2>${(d.unpaid||[]).length?`<div class="own-unpaid">${d.unpaid.map(u=>`<article><span>${esc(u.company)}<small>${esc(u.label)}</small></span><strong>${money(u.amount)}</strong></article>`).join('')}</div><p class="footnote">Stav plateb označují firmy samy v Objednávkách.</p>`:'<p class="photo-empty">Vše zaplacené.</p>'}</section>
  <section class="set-card"><h2>Firmy tento měsíc</h2><div class="own-firms">${(d.firms||[]).map(firma).join('')||'<p class="photo-empty">Zatím žádné objednávky.</p>'}</div></section>`;
+}
+
+
+// Zapomenuté heslo: odkaz na nastavení nového hesla přijde e-mailem.
+function forgotModal(){
+ openModal(`<p class="eyebrow">PŘIHLÁŠENÍ</p><h2>Zapomenuté heslo</h2>
+  <p class="modal-sub">Zadejte e-mail, kterým se přihlašujete. Pošleme na něj odkaz pro nastavení nového hesla. Odkaz platí jednu hodinu.</p>
+  <form id="forgot-form">
+   ${input('E-mail','email','','email','required autocomplete="username" placeholder="vas@email.cz"')}
+   <button class="primary full">Poslat odkaz</button>
+  </form>`);
+}
+// Nové heslo podle odkazu z e-mailu (adresa má tvar /?obnova=...).
+function resetModal(token){
+ openModal(`<p class="eyebrow">PŘIHLÁŠENÍ</p><h2>Nové heslo</h2>
+  <p class="modal-sub">Zvolte si nové heslo. Musí mít aspoň 12 znaků.</p>
+  <form id="reset-form" data-token="${esc(token)}">
+   ${input('Nové heslo','password','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}
+   ${input('Nové heslo znovu','password2','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}
+   <button class="primary full">Nastavit heslo a přihlásit se</button>
+  </form>`);
+}
+document.addEventListener('click',e=>{
+ if(e.target.closest('[data-action="forgot"]'))forgotModal();
+});
+document.addEventListener('submit',async e=>{
+ const f=e.target;
+ if(f.id==='forgot-form'){
+  e.preventDefault();const b=f.querySelector('button');b.disabled=true;
+  try{
+   await api('forgot',{email:f.elements.email.value});
+   $('#modal').close();
+   toast({title:'Odkaz je na cestě',text:'Pokud e-mail známe, do minuty dorazí zpráva s odkazem na nastavení hesla. Platí hodinu.'},false,8000);
+  }catch(err){b.disabled=false;toast(err.message,true);}
+  return;
+ }
+ if(f.id==='reset-form'){
+  e.preventDefault();const b=f.querySelector('button');b.disabled=true;
+  try{
+   if(f.elements.password.value!==f.elements.password2.value)throw new Error('Hesla se neshodují.');
+   await api('reset',{token:f.dataset.token,password:f.elements.password.value});
+   $('#modal').close();
+   toast({title:'Heslo je nastavené',text:'Přihlaste se novým heslem.'},false,8000);
+   // Odkaz z e-mailu z adresy uklidíme, ať se nedá použít omylem znovu; když to prohlížeč neumí, nevadí.
+   try{history.replaceState(null,'',location.pathname);}catch{}
+  }catch(err){b.disabled=false;toast(err.message,true);}
+ }
+});
+// Po otevření odkazu z e-mailu rovnou nabídneme nastavení hesla.
+{
+ const token=new URLSearchParams(location.search).get('obnova');
+ if(token)setTimeout(()=>resetModal(token),400);
 }

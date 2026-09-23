@@ -37,6 +37,7 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS reports(date TEXT PRIMARY KEY,body TEXT NOT NULL,status TEXT NOT NULL,created TEXT NOT NULL,sent TEXT,error TEXT);
  CREATE TABLE IF NOT EXISTS login_attempts(key TEXT PRIMARY KEY,count INTEGER NOT NULL,until INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS password_resets(token TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),expires INTEGER NOT NULL,created TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS payments(company_id INTEGER NOT NULL,period TEXT NOT NULL,paid_at TEXT NOT NULL,paid_by TEXT NOT NULL,PRIMARY KEY(company_id,period));
  CREATE TABLE IF NOT EXISTS order_edits(company_id INTEGER NOT NULL,date TEXT NOT NULL,edited_at TEXT NOT NULL,PRIMARY KEY(company_id,date));
 `);
@@ -213,6 +214,41 @@ const server=http.createServer(async(req,res)=>{
    return send(200,{ok:true},{'Set-Cookie':`srub_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`});
   }
   if(path==='/api/me'&&req.method==='GET')return send(200,{user,demo,clock:pragueNow()});
+  // Obnova zapomenutého hesla: odkaz e-mailem, platný hodinu a jen na jedno použití.
+  if(path==='/api/forgot'&&req.method==='POST'){
+   const smtp=smtpConfig();
+   if(!smtp)return send(503,{error:'Obnova hesla zatím není nastavená. Napište prosím restauraci.'});
+   const mail=String(body.email||'').trim().toLowerCase();
+   const klice=['obnova-ip:'+req.socket.remoteAddress,'obnova:'+mail];
+   if(!loginAllowed(klice))return send(429,{error:'Příliš mnoho pokusů. Zkuste to za 15 minut.'});
+   recordFailedLogin(klice);
+   const u=get("SELECT u.id,u.email FROM users u LEFT JOIN companies c ON c.id=u.company_id WHERE u.email=? AND (u.role<>'company' OR c.active=1)",mail);
+   if(u){
+    const raw=randomBytes(32).toString('hex');
+    run('DELETE FROM password_resets WHERE user_id=?',u.id);
+    run('INSERT INTO password_resets VALUES(?,?,?,?)',createHash('sha256').update(raw).digest('hex'),u.id,Date.now()+3600000,new Date().toISOString());
+    const odkaz=(process.env.APP_ORIGIN||'https://restauracesrub.cz')+'/?obnova='+raw;
+    const text=`Dobrý den,\n\npro nastavení nového hesla do objednávek obědů Srub Podkozí otevřete tento odkaz:\n${odkaz}\n\nOdkaz platí jednu hodinu a použít ho lze jen jednou.\nPokud jste o obnovu hesla nežádali, nic nedělejte – heslo zůstává beze změny.\n\nRestaurace Srub Podkozí`;
+    const html='<p>Dobrý den,</p><p>pro nastavení nového hesla do objednávek obědů Srub Podkozí otevřete tento odkaz:</p><p><a href="'+odkaz+'">Nastavit nové heslo</a></p><p>Odkaz platí jednu hodinu a použít ho lze jen jednou. Pokud jste o obnovu hesla nežádali, nic nedělejte – heslo zůstává beze změny.</p><p>Restaurace Srub Podkozí</p>';
+    try{await sendMail(smtp,{to:u.email,subject:'Obnova hesla – Srub Podkozí',text,html});}
+    catch(e){console.error('Obnova hesla se neodeslala:',e.message);}
+   }
+   // Stejná odpověď pro známý i neznámý e-mail, aby nešlo zjišťovat, kdo má účet.
+   return send(200,{ok:true});
+  }
+  if(path==='/api/reset'&&req.method==='POST'){
+   const zaznam=get('SELECT * FROM password_resets WHERE token=?',createHash('sha256').update(String(body.token||'')).digest('hex'));
+   if(!zaznam||zaznam.expires<Date.now())throw new Error('Odkaz na obnovu hesla už neplatí. Nechte si poslat nový.');
+   const nove=hash(password(String(body.password||'')));
+   const ucet=get('SELECT email FROM users WHERE id=?',zaznam.user_id);
+   transaction(()=>{
+    run('UPDATE users SET password=? WHERE id=?',nove,zaznam.user_id);
+    run('DELETE FROM sessions WHERE user_id=?',zaznam.user_id);
+    run('DELETE FROM password_resets WHERE user_id=?',zaznam.user_id);
+   });
+   clearLoginFailures(['obnova:'+ucet.email,'email:'+ucet.email]);
+   return send(200,{ok:true});
+  }
   if(!user)return send(401,{error:'Přihlaste se prosím.'});
   if(path==='/api/logout'&&req.method==='POST'){const token=(req.headers.cookie||'').match(/srub_session=([^;]+)/)?.[1]||'';run('DELETE FROM sessions WHERE token=?',createHash('sha256').update(token).digest('hex'));return send(200,{ok:true},{'Set-Cookie':'srub_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});}
   if(path==='/api/password'&&req.method==='POST'){const u=get('SELECT * FROM users WHERE id=?',user.id);if(!verify(String(body.current||''),u.password))return send(400,{error:'Současné heslo nesouhlasí.'});run('UPDATE users SET password=? WHERE id=?',hash(password(body.password)),user.id);run('DELETE FROM sessions WHERE user_id=?',user.id);return send(200,{ok:true});}
@@ -424,7 +460,7 @@ if(!process.env.VERCEL){
  server.listen(port,host,()=>{console.log(`Srub Podkozí: http://${host}:${port} (${demo?'local demo':'private application'})`);dailyReport();});
  setInterval(dailyReport,60000).unref();
  setInterval(pruneLoginAttempts,60000).unref();
- setInterval(()=>run('DELETE FROM sessions WHERE expires<?',Date.now()),3600000).unref();
+ setInterval(()=>{run('DELETE FROM sessions WHERE expires<?',Date.now());run('DELETE FROM password_resets WHERE expires<?',Date.now());},3600000).unref();
 }
 export default function handler(req,res){server.emit('request',req,res);}
 process.on('SIGTERM',()=>server.close(()=>{db.close();process.exit(0);}));

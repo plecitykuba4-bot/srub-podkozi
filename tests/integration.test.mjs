@@ -84,6 +84,23 @@ test('Přihlášení, role, oddělení firem, objednávky, ceny a revokace pří
   for(const [cesta,data] of [['admin/order',{company_id:clientId,date,items:[]}],['companies',{name:'X'}],['settings/bank',{account:'1'}],['payment/paid',{date:past,paid:false}],['order',{date,items:[]}]])
     assert.equal((await call(cesta,data,ghost)).status,403,`duch nesmí ${cesta}`);
   assert.equal((await call('owner-summary',null,client)).status,403,'firma souhrn tržeb nevidí');
+  // Zapomenuté heslo: bez nastavené schránky se odkaz neposílá, s platným odkazem si firma heslo změní sama.
+  assert.equal((await call('forgot',{email:'klient@example.cz'})).status,503,'bez SMTP appka řekne, že obnova není nastavená');
+  {
+   const {DatabaseSync}=await import('node:sqlite');const {randomBytes,createHash}=await import('node:crypto');
+   const db=new DatabaseSync(join(dir,'srub.sqlite'));
+   const uid=db.prepare('SELECT id FROM users WHERE email=?').get('klient@example.cz').id;
+   const raw=randomBytes(16).toString('hex');
+   const ulozit=(token,expires)=>db.prepare('INSERT OR REPLACE INTO password_resets VALUES(?,?,?,?)').run(createHash('sha256').update(token).digest('hex'),uid,expires,new Date().toISOString());
+   ulozit(raw,Date.now()+3600000);
+   const prosly=randomBytes(16).toString('hex');ulozit(prosly,Date.now()-1000);
+   db.close();
+   assert.equal((await call('reset',{token:prosly,password:'NoveHeslo12345'})).status,400,'prošlý odkaz neprojde');
+   assert.equal((await call('reset',{token:raw,password:'kratke'})).status,400,'krátké heslo neprojde');
+   assert.equal((await call('reset',{token:raw,password:'NoveHeslo12345'})).status,200);
+   assert.equal((await call('reset',{token:raw,password:'JesteJineHeslo1'})).status,400,'odkaz jde použít jen jednou');
+   assert.ok((await call('login',{email:'klient@example.cz',password:'NoveHeslo12345'})).cookie,'firma se přihlásí novým heslem');
+  }
   assert.equal((await call('companies',{name:'Test s.r.o.',email:'new@example.cz',address:'Chyňava',price:'',soup_price:'',packaging:'own',fee:0,password:'MyNewPassword123'},admin)).status,200);
   const newCookie=(await call('login',{email:'new@example.cz',password:'MyNewPassword123'})).cookie;
   assert.ok(newCookie);assert.equal((await call('history',null,newCookie)).data.rows.length,0);
