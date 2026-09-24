@@ -69,8 +69,8 @@ if(!get('SELECT id FROM users LIMIT 1')){
   for(const [date,name,description,allergens,price,category] of weekMenu)run('INSERT INTO meals(date,name,description,allergens,price,category) VALUES(?,?,?,?,?,?)',dayAfter(date,shift),name,description,allergens,price*100,category);
  }
 }
-// Lokální ukázka má záměrně deset firem a objednávky pro všechny dny menu,
-// aby se dal ověřit skutečný provozní soupis restaurace.
+// Lokální ukázka má stejné firmy a jídelníček jako ostrý provoz, ale žádné vymyšlené
+// objednávky – co si na localhostu objednáte, to jediné je v přehledech vidět.
 if(demo){
  const demoFirms=[
   ["Fish","fish@demo.cz","",null,"disposable",1000],
@@ -120,17 +120,7 @@ if(demo){
    const testId=run('INSERT INTO companies(name,email,address,price,packaging,fee) VALUES(?,?,?,?,?,?)','ZKOUŠKA','zkouska@demo.cz','',null,'disposable',1000).lastInsertRowid;
    run('INSERT INTO users(email,password,role,company_id) VALUES(?,?,?,?)','zkouska@demo.cz',hash('SrubDemo2026!'),'company',testId);
   }
-  // Ukázkové objednávky jen pro ukázkové firmy – firmy založené v aplikaci se generátor nesmí dotknout.
-  // Ceny se počítají podle pořadí jídla (M1–M4), aby platily i sjednané ceny firmy.
-  // Typ krabiček se nastavuje jen při založení firmy; přepisovat ho při každém startu by rušilo úpravy z aplikace.
-  const demoEmails=demoFirms.map(f=>f[1]);
-  const demoCompanies=all(`SELECT * FROM companies WHERE email IN (${demoEmails.map(()=>'?').join(',')})`,...demoEmails);
-  for(const {date} of all('SELECT DISTINCT date FROM meals'))
-   for(const meal of all(SQL_MEALS_WITH_SLOT,date))for(const c of demoCompanies){
-    const q=(meal.id*3+c.id*2)%6+1;
-    run('INSERT OR IGNORE INTO orders VALUES(?,?,?,?,?,?,?)',c.id,meal.id,q,portionPrice(meal,c),c.fee,c.packaging,new Date().toISOString());
-   }
-  // Ukázkové objednávky vzniknou jen jednou – jinak by se po každém startu vrátily i ty, které restaurace zrušila.
+  // Firmy se zakládají jen jednou – jinak by se po každém startu vrátily i ty smazané.
   set('demoFirmsSeeded','1');}
  });
 }
