@@ -8,6 +8,7 @@ import {pragueNow,closed,validDate,money,portionPrice,dayAfter} from './domain.m
 import {smtpConfig,sendMail} from './lib/mailer.mjs';
 import {reportHtml} from './lib/report-grid.mjs';
 import {kitchenWorkbook} from './lib/kitchen-xlsx.mjs';
+import {menuSheetHtml} from './lib/menu-sheet.mjs';
 import {toIban,formatIban,periodFor,variableSymbol,paymentMessage,spdString} from './lib/payment.mjs';
 import QRCode from 'qrcode';
 import {readMenuFile,reviewMeals,detectWeek,LIMITS} from './lib/menu-import.mjs';
@@ -40,11 +41,18 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  CREATE TABLE IF NOT EXISTS password_resets(token TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),expires INTEGER NOT NULL,created TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS payments(company_id INTEGER NOT NULL,period TEXT NOT NULL,paid_at TEXT NOT NULL,paid_by TEXT NOT NULL,PRIMARY KEY(company_id,period));
  CREATE TABLE IF NOT EXISTS order_edits(company_id INTEGER NOT NULL,date TEXT NOT NULL,edited_at TEXT NOT NULL,PRIMARY KEY(company_id,date));
+ -- Poznámka restaurace ke konkrétnímu jídlu firmy, např. „jeden s bramborem místo hranolek“.
+ -- Stojí mimo objednávku: začne se psát dřív, než se zadá počet porcí, a přežije i nulu.
+ CREATE TABLE IF NOT EXISTS order_notes(company_id INTEGER NOT NULL REFERENCES companies(id),meal_id INTEGER NOT NULL REFERENCES meals(id),note TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(company_id,meal_id));
+ CREATE TABLE IF NOT EXISTS menu_files(week_start TEXT PRIMARY KEY,mime TEXT NOT NULL,name TEXT NOT NULL,data BLOB NOT NULL,uploaded TEXT NOT NULL);
 `);
 for(const n of [1,2,3,4])addColumnIfMissing('companies',`price_m${n}`,'INTEGER');
 // Jak se firmě vyúčtovává: po týdnech, nebo za celý kalendářní měsíc.
 addColumnIfMissing('companies','billing',"TEXT NOT NULL DEFAULT 'week'");
 
+
+// Co od majitele přijímáme jako lístek a pod jakou příponou to firmě nabídneme.
+const MENU_FILE_TYPES={'application/pdf':'pdf','image/png':'png','image/jpeg':'jpg','image/webp':'webp'};
 const all=(sql,...p)=>db.prepare(sql).all(...p), get=(sql,...p)=>db.prepare(sql).get(...p), run=(sql,...p)=>db.prepare(sql).run(...p);
 function hash(password){const salt=randomBytes(16).toString('hex');return salt+':'+scryptSync(password,salt,64).toString('hex');}
 function verify(password,stored){const [salt,h]=stored.split(':');return timingSafeEqual(scryptSync(password,salt,64),Buffer.from(h,'hex'));}
@@ -125,7 +133,9 @@ if(demo){
  });
 }
 function session(req){const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('srub_session='))?.slice(13);if(!raw)return null;const token=createHash('sha256').update(raw).digest('hex');return get(`SELECT u.id,u.email,u.role,u.company_id,COALESCE(c.name,CASE u.role WHEN 'owner' THEN 'Tichý přehled' ELSE 'Restaurace Srub Podkozí' END) name FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN companies c ON c.id=u.company_id WHERE s.token=? AND s.expires>? AND (u.role IN ('admin','owner') OR c.active=1)`,token,Date.now());}
-function rowsFor(date,company){return all(`SELECT o.*,m.name,m.description,m.date,m.category,c.name company,c.address FROM orders o JOIN meals m ON m.id=o.meal_id JOIN companies c ON c.id=o.company_id WHERE m.date=? ${company?'AND o.company_id=?':''} ORDER BY c.name,m.id`,...company?[date,company]:[date]);}
+// Řádky nesou i slot jídla z jídelníčku (polévka 0, hlavní M1–M4), aby přehledy
+// a kuchyňský list držely pořadí z lístku, ne pořadí, v jakém firmy objednaly.
+function rowsFor(date,company){return all(`SELECT o.*,m.name,m.description,m.date,m.category,m.slot,c.name company,c.address,COALESCE(n.note,'') note FROM orders o JOIN (${SQL_MEALS_WITH_SLOT}) m ON m.id=o.meal_id JOIN companies c ON c.id=o.company_id LEFT JOIN order_notes n ON n.company_id=o.company_id AND n.meal_id=o.meal_id WHERE 1=1 ${company?'AND o.company_id=?':''} ORDER BY c.name,m.slot`,...company?[date,company]:[date]);}
 async function paymentFor(c,date){
  const p=periodFor(date,c.billing);
  const amount=get('SELECT COALESCE(SUM(o.quantity*(o.price+o.fee)),0) total FROM orders o JOIN meals m ON m.id=o.meal_id WHERE o.company_id=? AND m.date BETWEEN ? AND ?',c.id,p.from,p.to).total;
@@ -150,8 +160,9 @@ async function reportMail(date,subject){
  return {subject,text:reportText(date),html:reportHtml(date,s.rows,s.total,week),
   attachments:[{filename:`kuchynsky-list-${date}.xlsx`,content:await kitchenWorkbook(date,s.rows),contentType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}]};
 }
-function reportText(date){const s=summary(date);const total={};for(const r of s.rows)total[r.name]=(total[r.name]||0)+r.quantity;let body=`SRUB PODKOZÍ — ${date}\nUzávěrka v 8:00 (Europe/Prague)\nCelkem ${s.total} porcí pro ${s.firms} firem\n\nKUCHYNĚ\n`;
- for(const [name,q] of Object.entries(total))body+=`${q}× ${name}\n`;
+function reportText(date){const s=summary(date);const total=new Map();for(const r of s.rows){const t=total.get(r.name)||{q:0,slot:r.slot??99};t.q+=r.quantity;total.set(r.name,t);}let body=`SRUB PODKOZÍ — ${date}\nUzávěrka v 8:00 (Europe/Prague)\nCelkem ${s.total} porcí pro ${s.firms} firem\n\nKUCHYNĚ\n`;
+ // Souhrn pro kuchyň v pořadí z lístku, ne jak firmy objednávaly.
+ for(const [name,t] of [...total].sort((x,y)=>x[1].slot-y[1].slot))body+=`${t.q}× ${name}\n`;
  for(const id of new Set(s.rows.map(r=>r.company_id))){const rows=s.rows.filter(r=>r.company_id===id);body+=`\n${rows[0].company} — ${rows[0].address}\n`;for(const r of rows)body+=`${r.quantity}× ${r.name} | ${r.packaging==='own'?'vlastní krabičky':'jednorázové krabičky'}\n`;}
  return body;
 }
@@ -178,7 +189,8 @@ const server=http.createServer(async(req,res)=>{
    const expected=process.env.APP_ORIGIN||`http://${req.headers.host}`;
    if(req.headers.origin!==expected)return send(403,{error:'Nepovolený původ požadavku.'});
    if(!req.headers['content-type']?.startsWith('application/json'))return send(415,{error:'Vyžadován JSON.'});
-   let raw='';const bodyLimit=path==='/api/menu/read'?12*1024*1024:100000;for await(const chunk of req){raw+=chunk;if(raw.length>bodyLimit)return send(413,{error:'Soubor je příliš velký.'});}try{body=JSON.parse(raw||'{}');}catch{return send(400,{error:'Neplatná data.'});}
+   let raw='';// Kromě čtení lístku nese větší tělo i jeho uložení – originál jde na server s jídly.
+   const bodyLimit=path==='/api/menu/read'||path==='/api/meals'?12*1024*1024:100000;for await(const chunk of req){raw+=chunk;if(raw.length>bodyLimit)return send(413,{error:'Soubor je příliš velký.'});}try{body=JSON.parse(raw||'{}');}catch{return send(400,{error:'Neplatná data.'});}
   }
   if(path==='/api/login'&&req.method==='POST'){
    const limitKeys=['ip:'+req.socket.remoteAddress,'email:'+String(body.email||'').trim().toLowerCase()];
@@ -261,7 +273,32 @@ const server=http.createServer(async(req,res)=>{
    const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');
    const company=user.role==='company'?get('SELECT * FROM companies WHERE id=?',user.company_id):null;
    const meals=all(SQL_MEALS_WITH_SLOT,date).map(m=>({...m,price:company?portionPrice(m,company):m.price}));
-   return send(200,{date,closed:closed(date),meals,company,edited:company?get('SELECT edited_at FROM order_edits WHERE company_id=? AND date=?',company.id,date)?.edited_at||null:null,orders:company?rowsFor(date,company.id):rowsFor(date),dates:all('SELECT DISTINCT date FROM meals WHERE date>=? ORDER BY date',pragueNow().date).map(x=>x.date)});
+   return send(200,{date,closed:closed(date),meals,company,edited:company?get('SELECT edited_at FROM order_edits WHERE company_id=? AND date=?',company.id,date)?.edited_at||null:null,orders:company?rowsFor(date,company.id):rowsFor(date),dates:all('SELECT DISTINCT date FROM meals WHERE date>=? ORDER BY date',pragueNow().date).map(x=>x.date),menuFile:Boolean(get('SELECT 1 FROM menu_files WHERE week_start=?',weekDates0(date)[0]))});
+  }
+  // Lístek ke stažení – přesně ten soubor, který restaurace nahrála. Firma si ho vyvěsí u sebe.
+  if(path==='/api/menu/file'&&req.method==='GET'){
+   const week=url.searchParams.get('week')||pragueNow().date;
+   if(!validDate(week))throw new Error('Neplatné datum týdne.');
+   const f=get('SELECT * FROM menu_files WHERE week_start=?',weekDates0(week)[0]);
+   if(!f)return send(404,{error:'Na tento týden nemáme lístek ke stažení.'});
+   return send(200,Buffer.from(f.data),{'Content-Type':f.mime,'Content-Disposition':`attachment; filename="${f.name}"`});
+  }
+  // Jídelní lístek na celý týden ve vzhledu tištěného menu – vykreslí se z dat,
+  // takže funguje i pro týdny, kde žádný soubor nahraný není.
+  if(path==='/api/menu/sheet'&&req.method==='GET'){
+   const week=url.searchParams.get('week')||pragueNow().date;
+   if(!validDate(week))throw new Error('Neplatné datum týdne.');
+   // Firma dostává své sjednané ceny; restaurace ceníkové, nebo ceny vybrané firmy.
+   // Počítá se touž funkcí jako objednávání, aby se lístek s aplikací nemohl rozejít.
+   const wanted=Number(url.searchParams.get('company'))||null;
+   const firm=user.role==='company'?get('SELECT * FROM companies WHERE id=?',user.company_id)
+    :wanted?get('SELECT * FROM companies WHERE id=?',wanted):null;
+   const dates=weekDates0(week);
+   const byDate=Object.fromEntries(dates.map(d=>[d,all(SQL_MEALS_WITH_SLOT,d).map(m=>firm?{...m,price:portionPrice(m,firm)}:m)]));
+   const extras=setting('menuExtras').split('\n').map(x=>x.trim()).filter(Boolean);
+   const box=firm&&firm.packaging!=='own'&&firm.fee?`K každé porci se připočítává jednorázová krabička ${Math.round(firm.fee/100)} Kč.`:'';
+   return send(200,menuSheetHtml(dates,byDate,extras,firm?.name||'',box),{'Content-Type':'text/html; charset=utf-8',
+    'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"});
   }
   if(path==='/api/history'&&req.method==='GET')return send(200,{menuDates:all('SELECT DISTINCT date FROM meals ORDER BY date').map(m=>m.date),rows:all(`SELECT o.*,m.name,m.date FROM orders o JOIN meals m ON m.id=o.meal_id ${user.role==='company'?'WHERE o.company_id=?':''} ORDER BY m.date DESC,m.id`,...user.role==='company'?[user.company_id]:[]),edits:user.role==='company'?all('SELECT date,edited_at FROM order_edits WHERE company_id=?',user.company_id):[]});
   if(path==='/api/order'&&req.method==='POST'){
@@ -272,7 +309,7 @@ const server=http.createServer(async(req,res)=>{
     const c=get('SELECT * FROM companies WHERE id=?',user.company_id);const seen=new Set();
     for(const item of body.items){if(!Number.isInteger(item.id)||!Number.isInteger(item.quantity)||item.quantity<0||item.quantity>500||seen.has(item.id))throw new Error('Počet porcí musí být celé číslo od 0 do 500.');seen.add(item.id);const m=all(SQL_MEALS_WITH_SLOT,body.date).find(x=>x.id===item.id);if(!m)throw new Error('Jídlo už není v nabídce.');
      if(item.quantity===0)run('DELETE FROM orders WHERE company_id=? AND meal_id=?',c.id,m.id);
-     else run('INSERT INTO orders VALUES(?,?,?,?,?,?,?) ON CONFLICT(company_id,meal_id) DO UPDATE SET quantity=excluded.quantity,updated=excluded.updated',c.id,m.id,item.quantity,portionPrice(m,c),c.fee,c.packaging,new Date().toISOString());
+     else run('INSERT INTO orders(company_id,meal_id,quantity,price,fee,packaging,updated) VALUES(?,?,?,?,?,?,?) ON CONFLICT(company_id,meal_id) DO UPDATE SET quantity=excluded.quantity,updated=excluded.updated',c.id,m.id,item.quantity,portionPrice(m,c),c.fee,c.packaging,new Date().toISOString());
     }
    });return send(200,{ok:true});
   }
@@ -318,25 +355,36 @@ const server=http.createServer(async(req,res)=>{
    const date=url.searchParams.get('date');if(!validDate(date))throw new Error('Neplatné datum.');
    const c=get('SELECT * FROM companies WHERE id=?',Number(url.searchParams.get('company')));if(!c)throw new Error('Firma neexistuje.');
    const orders=all('SELECT * FROM orders WHERE company_id=?',c.id);
-   const meals=all(SQL_MEALS_WITH_SLOT,date).map(m=>{const o=orders.find(x=>x.meal_id===m.id);return {id:m.id,name:m.name,description:m.description,category:m.category,slot:m.slot,quantity:o?.quantity||0,price:o?o.price:portionPrice(m,c),fee:o?o.fee:(c.packaging==='own'?0:c.fee),locked:Boolean(o)};});
+   const notes=new Map(all('SELECT meal_id,note FROM order_notes WHERE company_id=?',c.id).map(n=>[n.meal_id,n.note]));
+   const meals=all(SQL_MEALS_WITH_SLOT,date).map(m=>{const o=orders.find(x=>x.meal_id===m.id);return {id:m.id,name:m.name,description:m.description,category:m.category,slot:m.slot,quantity:o?.quantity||0,note:notes.get(m.id)||'',price:o?o.price:portionPrice(m,c),fee:o?o.fee:(c.packaging==='own'?0:c.fee),locked:Boolean(o)};});
    return send(200,{date,closed:closed(date),company:{id:c.id,name:c.name,packaging:c.packaging,fee:c.fee},meals,edited:get('SELECT edited_at FROM order_edits WHERE company_id=? AND date=?',c.id,date)?.edited_at||null});
   }
   if(path==='/api/admin/order'&&req.method==='POST'){
    if(!validDate(body.date)||!Number.isInteger(body.company_id)||!Array.isArray(body.items)||body.items.length>100)throw new Error('Neplatná úprava objednávky.');
    const c=get('SELECT * FROM companies WHERE id=?',body.company_id);if(!c)throw new Error('Firma neexistuje.');
-   const meals=all(SQL_MEALS_WITH_SLOT,body.date);const seen=new Set();let changed=0;
+   // Poznámka je na jednu dvě věty; delší text by se do kuchyňského listu nevpěchnul.
+   const noteOf=item=>String(item.note??'').replace(/\s+/g,' ').trim().slice(0,200);
+   const meals=all(SQL_MEALS_WITH_SLOT,body.date);const seen=new Set();let changed=0,notes=0;
    transaction(()=>{
     for(const item of body.items){
      if(!Number.isInteger(item.id)||!Number.isInteger(item.quantity)||item.quantity<0||item.quantity>500||seen.has(item.id))throw new Error('Počet porcí musí být celé číslo od 0 do 500.');
      seen.add(item.id);const m=meals.find(x=>x.id===item.id);if(!m)throw new Error('Jídlo v tento den není v jídelníčku.');
      const o=get('SELECT * FROM orders WHERE company_id=? AND meal_id=?',c.id,m.id);
+     // Poznámka se ukládá samostatně – restaurace si ji často zapíše dřív, než firma
+     // pošle počty, a nesmí zmizet jen proto, že jídlo zrovna nemá žádnou porci.
+     const note=noteOf(item), was=get('SELECT note FROM order_notes WHERE company_id=? AND meal_id=?',c.id,m.id)?.note||'';
+     if(note!==was){
+      if(note)run("INSERT INTO order_notes VALUES(?,?,?,?) ON CONFLICT(company_id,meal_id) DO UPDATE SET note=excluded.note,updated=excluded.updated",c.id,m.id,note,new Date().toISOString());
+      else run('DELETE FROM order_notes WHERE company_id=? AND meal_id=?',c.id,m.id);
+      notes++;
+     }
      if(item.quantity===0){if(o){run('DELETE FROM orders WHERE company_id=? AND meal_id=?',c.id,m.id);changed++;}}
      else if(o){if(o.quantity!==item.quantity){run('UPDATE orders SET quantity=?,updated=? WHERE company_id=? AND meal_id=?',item.quantity,new Date().toISOString(),c.id,m.id);changed++;}}
-     else{run('INSERT INTO orders VALUES(?,?,?,?,?,?,?)',c.id,m.id,item.quantity,portionPrice(m,c),c.packaging==='own'?0:c.fee,c.packaging,new Date().toISOString());changed++;}
+     else{run('INSERT INTO orders(company_id,meal_id,quantity,price,fee,packaging,updated) VALUES(?,?,?,?,?,?,?)',c.id,m.id,item.quantity,portionPrice(m,c),c.packaging==='own'?0:c.fee,c.packaging,new Date().toISOString());changed++;}
     }
-    if(changed)run('INSERT INTO order_edits VALUES(?,?,?) ON CONFLICT(company_id,date) DO UPDATE SET edited_at=excluded.edited_at',c.id,body.date,new Date().toISOString());
+    if(changed||notes)run('INSERT INTO order_edits(company_id,date,edited_at) VALUES(?,?,?) ON CONFLICT(company_id,date) DO UPDATE SET edited_at=excluded.edited_at',c.id,body.date,new Date().toISOString());
    });
-   return send(200,{ok:true,changed});
+   return send(200,{ok:true,changed,notes});
   }
   if(path==='/api/dashboard'&&req.method==='GET'){const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');return send(200,{...summary(date),closed:closed(date),companies:all('SELECT * FROM companies ORDER BY name'),report:get('SELECT date,status,sent,error FROM reports WHERE date=?',date)||null});}
   if(path==='/api/menu/read'&&req.method==='POST'){
@@ -421,6 +469,18 @@ const server=http.createServer(async(req,res)=>{
     }
     for(const m of meals){if(!validDate(m.date)||closed(m.date))throw new Error('Jídelníček po uzávěrce nelze měnit.');const values=[m.date,text(m.name),String(m.description||'').slice(0,500),String(m.allergens||'').slice(0,80),money(m.price),text(m.category||'Z naší kuchyně',50)];if(m.id){const old=get('SELECT * FROM meals WHERE id=?',m.id);if(!old||closed(old.date))throw new Error('Toto jídlo nelze změnit.');if(get('SELECT 1 FROM orders WHERE meal_id=?',m.id))throw new Error('Jídlo už má objednávky. Zachováme jeho původní údaje.');run('UPDATE meals SET date=?,name=?,description=?,allergens=?,price=?,category=? WHERE id=?',...values,m.id);}else run('INSERT INTO meals(date,name,description,allergens,price,category) VALUES(?,?,?,?,?,?)',...values);}
    });
+   // Originál lístku si schováme tak, jak přišel – firmy ho pak stahují v té podobě,
+   // v jaké ho restaurace vyvěsila, ne jako přepis z databáze.
+   if(importing&&body.file&&typeof body.file.data==='string'){
+    const buf=Buffer.from(body.file.data,'base64');
+    const mime=String(body.file.mime||'');
+    if(!buf.length)throw new Error('Soubor lístku je prázdný.');
+    if(buf.length>LIMITS.maxBytes)throw new Error('Soubor lístku smí mít nejvýše 8 MB.');
+    if(!MENU_FILE_TYPES[mime])throw new Error('Lístek uložíme jako PDF, PNG, JPG nebo WEBP.');
+    const monday=weekDates0(dates[0])[0];
+    run('INSERT INTO menu_files VALUES(?,?,?,?,?) ON CONFLICT(week_start) DO UPDATE SET mime=excluded.mime,name=excluded.name,data=excluded.data,uploaded=excluded.uploaded',
+     monday,mime,`jidelnicek-${monday}.${MENU_FILE_TYPES[mime]}`,buf,new Date().toISOString());
+   }
    return send(200,{ok:true,saved:meals.length,from:dates[0],to:dates[dates.length-1],days:dates.length,companies:get('SELECT COUNT(*) n FROM companies WHERE active=1').n});
   }
   if(path==='/api/meals/delete'&&req.method==='POST'){const m=get('SELECT * FROM meals WHERE id=?',body.id);if(!m||closed(m.date))throw new Error('Toto jídlo nelze odstranit.');if(get('SELECT 1 FROM orders WHERE meal_id=?',m.id))throw new Error('Jídlo už má objednávky a nelze je odstranit.');run('DELETE FROM meals WHERE id=?',m.id);return send(200,{ok:true});}
@@ -429,8 +489,13 @@ const server=http.createServer(async(req,res)=>{
    if(!input){set('bankIban','');set('bankAccount','');return send(200,{ok:true,iban:''});}
    const iban=toIban(input);set('bankIban',iban);set('bankAccount',input);return send(200,{ok:true,iban:formatIban(iban)});
   }
-  if(path==='/api/settings'&&req.method==='GET')return send(200,{bankAccount:setting('bankAccount'),bankIban:setting('bankIban')?formatIban(setting('bankIban')):'',reportEmail:setting('reportEmail'),emailReady:!demo&&Boolean(smtpConfig()),smtpReady:Boolean(smtpConfig()),demo});
-  if(path==='/api/settings'&&req.method==='POST'){set('reportEmail',body.reportEmail?email(body.reportEmail):'');return send(200,{ok:true});}
+  if(path==='/api/settings'&&req.method==='GET')return send(200,{bankAccount:setting('bankAccount'),bankIban:setting('bankIban')?formatIban(setting('bankIban')):'',reportEmail:setting('reportEmail'),menuExtras:setting('menuExtras'),emailReady:!demo&&Boolean(smtpConfig()),smtpReady:Boolean(smtpConfig()),demo});
+  if(path==='/api/settings'&&req.method==='POST'){
+   set('reportEmail',body.reportEmail?email(body.reportEmail):'');
+   // Doplňková nabídka do patičky lístku – každý řádek jedna položka, nejvýše deset.
+   if(body.menuExtras!==undefined)set('menuExtras',String(body.menuExtras).split('\n').map(x=>x.trim()).filter(Boolean).slice(0,10).join('\n').slice(0,600));
+   return send(200,{ok:true});
+  }
   if(path==='/api/report'&&req.method==='GET'){const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');const book=await kitchenWorkbook(date,summary(date).rows);return send(200,book,{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':`attachment; filename="kuchynsky-list-${date}.xlsx"`});}
   return send(404,{error:'Požadavek neexistuje.'});
  }catch(e){const message=String(e.message);send(400,{error:message.includes('UNIQUE')?'Tento e-mail už používá jiný účet.':message.includes('SQLITE')?'Data se nepodařilo uložit.':message});}

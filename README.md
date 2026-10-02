@@ -29,6 +29,10 @@ Demo běží jen na localhost, neodesílá e-maily, obsahuje fiktivní firmy a p
 - Denní přehled kuchyně, rozdělení pro rozvoz, tisk a stažení textového souhrnu.
 - Serverový plánovač po 8:00 vytvoří souhrn; po restartu daný den ho doplní. Pro automatické odesílání musí server trvale běžet. Zmeškané předchozí dny automaticky nerozesílá.
 - E-mailová integrace Resend s idempotencí a opakováním při chybě. Vyžaduje připojení služby; místní demo zprávy nikdy neodesílá.
+- Poznámka restaurace ke **konkrétnímu jídlu firmy** (např. „jeden s bramborem místo hranolek“). Zadává se v „Upravit“ u daného jídla a drží se nezávisle na počtu porcí – uloží se i k jídlu, které firma ještě nemá objednané. Kuchyň ji vidí v buňce u té porce, v aplikaci i ve staženém Excelu. Nejvýše 200 znaků; smazáním textu zmizí.
+- Jídelní lístek ke stažení pro firmy. Tlačítko v Jídelníčku otevře celý týden na jedné A4 ve vzhledu tištěného menu (`lib/menu-sheet.mjs`) a rovnou nabídne tisk – odtud se ukládá jako PDF. Vykresluje se z dat, takže funguje i pro týdny nahrané přes CSV nebo zadané ručně. Patičku s doplňkovou nabídkou (omáčky, pečivo, krabička) nastavíte v Nastavení.
+- Když restaurace lístek nahraje jako PDF nebo fotku, originál se uloží k danému týdnu a firma si ho může stáhnout vedle vykreslené verze. Starší nahrání originál nemají – ukládá se až od téhle změny.
+- Pořadí jídel v přehledech drží jídelní lístek (polévka, pak hlavní M1–M4), ne pořadí, v jakém firmy objednávaly.
 
 ## Soubor CSV
 

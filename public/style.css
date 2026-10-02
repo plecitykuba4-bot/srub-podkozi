@@ -736,8 +736,29 @@ html{scrollbar-gutter:stable}
 /* Úprava objednávky restaurací a poznámka o úpravě u dne */
 .edit-note{margin:2px 0 8px;color:#a96c00;font-size:12px;font-weight:700}
 .admin-edit-list{display:grid;gap:8px;margin:14px 0 16px}
-.admin-edit-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #eee2cf;border-radius:12px;background:#fff}
-.admin-edit-row>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+/* Poznámka pro kuchyň: pod seznamem porců, tlumeně – je to doplňek, ne hlavní vstup. */
+/* Stáhnout lístek: nabídka navíc, proto tlumeně – nemá přebíjet výběr jídla. */
+.menu-sheet-links{display:grid;gap:8px;margin:0 0 14px}
+.menu-download{display:flex;flex-direction:column;gap:2px;margin:0;padding:12px 14px;border:1px solid #eee2cf;border-radius:12px;background:#fff;color:#8a5800;font-size:14px;font-weight:700;text-decoration:none}
+.menu-download small{color:#776b58;font-size:12px;font-weight:400}
+.menu-download:hover{border-color:#ffb000;background:#fff6e2}
+/* Originál od restaurace je doplněk k vykreslenému lístku, proto tlumeněji. */
+.menu-download.alt{border-style:dashed;background:#fffdf8;color:#776b58;font-size:13px}
+.fitness-content textarea{width:100%;box-sizing:border-box;min-height:110px;margin-top:7px;padding:12px 13px;border:1px solid var(--fitness-line);border-radius:10px;background:#fff;color:var(--fitness-text);font:inherit;font-size:14px;font-weight:400;line-height:1.5;resize:vertical}
+.fitness-content textarea:focus{outline:3px solid #b8d3fa;outline-offset:1px;border-color:var(--fitness-blue)}
+
+/* Poznámka u dne v objednávce: čitelná, ale podbarvená – patří ke dni, ne k číslům. */
+/* Poznámka firmy v záhlaví sloupce: čitelná, ale nesmí přebít počty porcí. */
+.ks-note{display:block;margin:2px auto 0;max-width:120px;color:#8a5800;font-size:11px;font-style:italic;font-weight:400;line-height:1.3;white-space:normal;text-transform:none;letter-spacing:normal}
+
+.order-note{margin:2px 0 8px;padding:1px 0 1px 9px;border-left:2px solid #ffb000;color:#6b5c46;font-size:13px;font-style:italic;line-height:1.45}
+/* Poznámka u jídla: tlumená, dokud je prázdná – je to doplněk, ne hlavní vstup. */
+#modal .admin-edit-note,.admin-edit-note{width:100%;box-sizing:border-box;height:auto;min-height:0;margin:0;padding:7px 10px;border:1px dashed #e3d3b4;border-radius:9px;background:#fffdf8;color:#4a4034;font:inherit;font-size:13px;font-style:italic;line-height:1.4;text-align:left}
+#modal .admin-edit-note:focus,.admin-edit-note:focus{outline:2px solid #ffb000;outline-offset:1px;border-style:solid;border-color:#ffb000;background:#fff;font-style:normal}
+.admin-edit-note::placeholder{color:#b3a68c;font-style:normal}
+.admin-edit-row{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #eee2cf;border-radius:12px;background:#fff}
+.admin-edit-main{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.admin-edit-main>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
 .admin-edit-row b{color:#231f18;font-size:14px;font-weight:700}
 .admin-edit-row small{color:#776b58;font-size:12px}
 .admin-edit-qty{display:flex;align-items:center;gap:6px;flex:none}

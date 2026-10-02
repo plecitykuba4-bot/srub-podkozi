@@ -55,7 +55,7 @@ document.addEventListener('click',async event=>{const b=event.target.closest('bu
  if(a==='next-day'){state.date=state.data.dates.find(d=>d>state.clock.date)||plus(state.clock.date,1);await render();}
  if(a==='save-order'){b.disabled=true;await api('order',{date:state.date,items:state.data.meals.map(m=>({id:m.id,quantity:state.quantities[m.id]||0}))});state.dirty=false;await render();toast('Objednávka je uložená. Děkujeme a dobrou chuť!');}
  if(a==='csv-template')download('vzor-jidelnicku.csv','datum;nazev;popis;alergeny;cena;typ\n'+plus(state.clock.date,1)+';Hovězí vývar;Maso, nudle, zelenina;1, 3, 9, 12;60;Polévka\n');
- if(a==='save-import'){const bad=importDraft.filter(m=>!m.name||!(m.price>0));if(bad.length)throw new Error(`${bad.length} jídel nemá název nebo cenu. Doplňte je před uložením.`);b.disabled=true;let r;try{r=await api('meals',{meals:importDraft});}finally{b.disabled=false;}state.date=r.from||importDraft[0].date;$('#modal').close();await render();const kratce=d=>dateLabel(d,{day:'numeric',month:'numeric'});const rozsah=r.from===r.to?kratce(r.from):`${kratce(r.from)} – ${kratce(r.to)}`;const kdo=r.companies===1?'1 firma':`všech ${r.companies} ${plural(r.companies,'firma','firmy','firem')}`;toast(`Jídelníček na ${rozsah} je uložený (${r.saved} ${plural(r.saved,'jídlo','jídla','jídel')}) – vidí ho ${kdo}.`,false,9000);}
+ if(a==='save-import'){const bad=importDraft.filter(m=>!m.name||!(m.price>0));if(bad.length)throw new Error(`${bad.length} jídel nemá název nebo cenu. Doplňte je před uložením.`);b.disabled=true;let r;try{r=await api('meals',{meals:importDraft,file:importFile||undefined});}finally{b.disabled=false;}state.date=r.from||importDraft[0].date;$('#modal').close();await render();const kratce=d=>dateLabel(d,{day:'numeric',month:'numeric'});const rozsah=r.from===r.to?kratce(r.from):`${kratce(r.from)} – ${kratce(r.to)}`;const kdo=r.companies===1?'1 firma':`všech ${r.companies} ${plural(r.companies,'firma','firmy','firem')}`;toast(`Jídelníček na ${rozsah} je uložený (${r.saved} ${plural(r.saved,'jídlo','jídla','jídel')}) – vidí ho ${kdo}.`,false,9000);}
  }catch(e){b.disabled=false;const target=$('#modal[open] .form-error');if(target)target.textContent=e.message;else toast(e.message,true);}});
 document.addEventListener('change',async e=>{try{if(e.target.name==='packaging'){const fee=e.target.closest('form')?.querySelector('.fee-field');if(fee)fee.hidden=e.target.value==='own';}if(e.target.id==='date-picker'){if(!canLeave()){e.target.value=state.date;return;}if(e.target.value){state.date=e.target.value;await render();}}
  if(e.target.dataset.quantity){const n=Number(e.target.value);if(!Number.isInteger(n)||n<0||n>500){e.target.value=state.quantities[e.target.dataset.quantity]||0;throw new Error('Zadejte celé číslo od 0 do 500.');}state.quantities[e.target.dataset.quantity]=n;state.dirty=true;$('#content').innerHTML=menuView();}
@@ -66,7 +66,7 @@ document.addEventListener('change',async e=>{try{if(e.target.name==='packaging')
    const rows=parseCSV(await f.text());
    if(!rows.length||rows.length>100)throw new Error('CSV musí obsahovat 1 až 100 jídel.');
    const meals=rows.map(m=>({date:m.date,category:m.typ||m.category||'Hlavní jídlo',name:m.name,description:m.popis||m.description||'',allergens:m.alergeny||m.allergens||'',price:Number(m.price),warnings:[]}));
-   box.innerHTML=importPreview(meals,[],'');return;}
+   importFile=null;box.innerHTML=importPreview(meals,[],'');return;}
   if(f.size>8*1024*1024)throw new Error('Soubor smí mít nejvýše 8 MB.');
   const r=await readMenuWithProgress(f,monday,box);
   box.innerHTML=importPreview(r.meals,r.notes,r.poznamka,r.weekDates);}
@@ -107,7 +107,7 @@ function adminMenuView(){
 }
 function simpleMenu(){
  const d=state.data,total=d.orders.reduce((sum,o)=>sum+o.quantity,0);
- return `<div class="simple-title"><h1>Jídelníček</h1><p>Vyberte den a objednejte si jídlo.</p></div>${simpleWeek()}<div class="simple-day-heading"><h2>${dateLabel(state.date,{weekday:'long',day:'numeric',month:'long'})}</h2>${d.closed?'':'<span class="cutoff">Objednávky do 8:00 v den rozvozu</span>'}</div>${d.edited?editNote([{date:state.date,edited_at:d.edited}],state.date):''}${d.closed?'<p class="change-call">Pro změnu jídla volejte <a href="tel:+420602122100">+420 602 122 100</a></p><p class="plain-notice">Na tento den už nelze objednávat. Vyberte jiný den.</p>':''}<div class="simple-meals">${d.meals.map(m=>{const o=d.orders.find(x=>x.meal_id===m.id);return `<article class="simple-meal ${o?'is-ordered':''}"><div class="simple-meal-text"><span class="meal-type">${esc(m.category)}</span><h3>${esc(m.name)}</h3><p class="meal-meta">${m.description?esc(m.description)+' ':''}<small>Alergeny: ${esc(m.allergens||'neuvedeny')}</small></p>${o?`<div class="ordered-label">✓ Objednáno ${o.quantity}×</div>`:''}</div><div class="simple-meal-action"><div class="price-stack"><strong>${money(o?.price??m.price)}</strong>${boxFee(o,d.company)?`<small class="box-fee">+ ${money(boxFee(o,d.company))} krabička</small>`:''}</div><button class="${o?'secondary':'primary'}" data-order-meal="${m.id}" ${d.closed?'disabled':''}>${d.closed?'Uzavřeno':o?'Změnit počet':'Objednat'}</button></div></article>`;}).join('')||empty('Jídelníček není připravený','Zkuste jiný den.')}</div>${total?`<div class="simple-day-total"><div><strong>Na tento den máte ${total} ${plural(total,'porci','porce','porcí')}.</strong><p>Objednávky jsou uložené.</p></div><button class="secondary" data-view="orders">Zobrazit souhrn →</button></div>`:''}`;
+ return `<div class="simple-title"><h1>Jídelníček</h1><p>Vyberte den a objednejte si jídlo.</p></div>${simpleWeek()}<div class="menu-sheet-links"><a class="menu-download" href="/api/menu/sheet?week=${state.date}" target="_blank" rel="noopener">↓ Stáhnout jídelníček<small>Celý týden na jednu stránku – k uložení do PDF nebo k vytištění</small></a>${d.menuFile?`<a class="menu-download alt" href="/api/menu/file?week=${state.date}" download>↓ Originál od restaurace<small>Soubor tak, jak ho restaurace nahrála</small></a>`:''}</div><div class="simple-day-heading"><h2>${dateLabel(state.date,{weekday:'long',day:'numeric',month:'long'})}</h2>${d.closed?'':'<span class="cutoff">Objednávky do 8:00 v den rozvozu</span>'}</div>${d.edited?editNote([{date:state.date,edited_at:d.edited,note:d.note}],state.date):''}${d.closed?'<p class="change-call">Pro změnu jídla volejte <a href="tel:+420602122100">+420 602 122 100</a></p><p class="plain-notice">Na tento den už nelze objednávat. Vyberte jiný den.</p>':''}<div class="simple-meals">${d.meals.map(m=>{const o=d.orders.find(x=>x.meal_id===m.id);return `<article class="simple-meal ${o?'is-ordered':''}"><div class="simple-meal-text"><span class="meal-type">${esc(m.category)}</span><h3>${esc(m.name)}</h3><p class="meal-meta">${m.description?esc(m.description)+' ':''}<small>Alergeny: ${esc(m.allergens||'neuvedeny')}</small></p>${o?`<div class="ordered-label">✓ Objednáno ${o.quantity}×</div>`:''}</div><div class="simple-meal-action"><div class="price-stack"><strong>${money(o?.price??m.price)}</strong>${boxFee(o,d.company)?`<small class="box-fee">+ ${money(boxFee(o,d.company))} krabička</small>`:''}</div><button class="${o?'secondary':'primary'}" data-order-meal="${m.id}" ${d.closed?'disabled':''}>${d.closed?'Uzavřeno':o?'Změnit počet':'Objednat'}</button></div></article>`;}).join('')||empty('Jídelníček není připravený','Zkuste jiný den.')}</div>${total?`<div class="simple-day-total"><div><strong>Na tento den máte ${total} ${plural(total,'porci','porce','porcí')}.</strong><p>Objednávky jsou uložené.</p></div><button class="secondary" data-view="orders">Zobrazit souhrn →</button></div>`:''}`;
 }
 var history = function(){
  const weekday=new Date(state.date+'T12:00:00Z').getUTCDay(),monday=plus(state.date,-((weekday+6)%7));
@@ -271,9 +271,13 @@ function companyDelivery(){
 
 function kitchenBlocks(){
  const d=state.data,rows=d.rows||[];
- const dishes=[];for(const r of rows)if(!dishes.some(x=>x.name===r.name))dishes.push({name:r.name,soup:/pol[ée]vka|vývar|krém|česnek|boršč/i.test(r.name)});
- dishes.sort((a,b)=>(a.soup===b.soup)?0:(a.soup?-1:1));
+ // Pořadí i polévku bere z jídelního lístku (slot 0 = polévka, 1–4 hlavní),
+ // ne z názvu jídla – „Kuřecí vývar“ i „Hovězí s náplní“ tak sedí vždy.
+ const dishes=[];for(const r of rows)if(!dishes.some(x=>x.name===r.name))dishes.push({name:r.name,soup:r.category==='Polévka',slot:r.slot??99});
+ dishes.sort((a,b)=>a.slot-b.slot);
  const qty=(companyId,name)=>rows.filter(r=>r.company_id===companyId&&r.name===name).reduce((s,r)=>s+r.quantity,0);
+ // Poznámka patří k té jedné porci, proto se kreslí do buňky jídla, ne k firmě.
+ const noteOf=(companyId,name)=>rows.filter(r=>r.company_id===companyId&&r.name===name&&r.note).map(r=>r.note).join(' ');
  const block=(packaging,title)=>{
   const ids=[...new Set(rows.filter(r=>r.packaging===packaging).map(r=>r.company_id))];
   const firms=ids.map(id=>({id,name:rows.find(r=>r.company_id===id).company}));
@@ -283,7 +287,7 @@ function kitchenBlocks(){
   return `<section class="ks-block"><h2>${title} <small>${firms.length} ${plural(firms.length,'firma','firmy','firem')}</small></h2>
    <div class="ks-scroll"><table class="ks-table">
    <thead><tr><th class="ks-dish">Jídlo</th>${firms.map(f=>`<th><span>${esc(f.name)}</span></th>`).join('')}<th class="ks-sum">Celkem</th></tr></thead>
-   <tbody>${dishes.map(x=>`<tr class="${x.soup?'ks-soup':''}"><td class="ks-dish">${esc(x.name)}</td>${firms.map(f=>{const q=qty(f.id,x.name);return `<td>${q||'<span class="ks-zero">–</span>'}</td>`;}).join('')}<td class="ks-sum">${dishTotal(x.name)}</td></tr>`).join('')}</tbody>
+   <tbody>${dishes.map(x=>`<tr class="${x.soup?'ks-soup':''}"><td class="ks-dish">${esc(x.name)}</td>${firms.map(f=>{const q=qty(f.id,x.name),n=noteOf(f.id,x.name);return `<td>${q||'<span class="ks-zero">–</span>'}${n?`<em class="ks-note">${esc(n)}</em>`:''}</td>`;}).join('')}<td class="ks-sum">${dishTotal(x.name)}</td></tr>`).join('')}</tbody>
    <tfoot><tr><td class="ks-dish">Celkem za firmu</td>${firms.map(f=>`<td>${firmTotal(f.id)}</td>`).join('')}<td class="ks-sum">${firms.reduce((s,f)=>s+firmTotal(f.id),0)}</td></tr></tfoot>
    </table></div></section>`;};
  const totalFor=(name,packaging)=>rows.filter(r=>r.name===name&&r.packaging===packaging).reduce((s,r)=>s+r.quantity,0);
@@ -313,6 +317,7 @@ adminSettings=function(){
   <p>Přidejte novou firmu, změňte jí typ krabiček nebo ji odeberte ze seznamu.</p></section>
  <section class="set-card"><h2>Ranní souhrn e-mailem</h2>
   <form id="settings-form"><label>E-mail pro ranní souhrn<input type="email" name="reportEmail" value="${esc(d.reportEmail||'')}"></label>
+  <label>Doplňková nabídka v patičce jídelního lístku<textarea name="menuExtras" rows="5" placeholder="Omáčka 40 Kč&#10;Menu Box 15 Kč&#10;Pečivo 7 Kč">${esc(d.menuExtras||'')}</textarea></label>
   <button class="primary">Uložit nastavení</button></form></section>
  <section class="set-card"><h2>Účet</h2><p>${esc(state.user.name)}</p>
   <button class="secondary" data-action="logout">Odhlásit se</button></section>`;
@@ -454,9 +459,11 @@ adminSettings=function(){
 };
 
 let importDraft=[];
+// Originál nahraného lístku. Drží se jen do uložení; pak putuje na server k danému týdnu.
+let importFile=null;
 
 importModal=function(){
- importDraft=[];
+ importDraft=[];importFile=null;
  const monday=(()=>{const w=new Date(state.date+'T12:00:00Z').getUTCDay();return plus(state.date,-((w+6)%7));})();
  openModal(`<p class="eyebrow">CELÝ TÝDEN NAJEDNOU</p><h2>Nahrát jídelní lístek</h2>
  <p>Nahrajte lístek jako PDF nebo fotku, případně vyplněné CSV. <strong>Před uložením uvidíte náhled a můžete cokoli opravit.</strong></p>
@@ -615,6 +622,7 @@ async function readMenuWithProgress(file,weekStart,box){
   // Převod po částech – rozbalení celého pole do argumentů by u většího souboru spadlo.
   const bytes=new Uint8Array(await file.arrayBuffer());
   let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+  importFile={data:btoa(bin),mime:file.type||'application/pdf'};
   show(8,'Nahrávám lístek…');
   const res=await fetch('/api/menu/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:btoa(bin),mediaType:file.type||'application/pdf',weekStart})});
   if(!(res.headers.get('Content-Type')||'').includes('ndjson')){const d=await res.json().catch(()=>({}));throw new Error(d.error||'Lístek se nepodařilo načíst.');}
@@ -790,7 +798,7 @@ document.addEventListener('click',async e=>{
 function editNote(edits,date){
  const e=(edits||[]).find(x=>x.date===date);if(!e)return '';
  const when=new Date(e.edited_at).toLocaleString('cs-CZ',{timeZone:'Europe/Prague',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
- return `<p class="edit-note">✎ Upraveno restaurací ${esc(when)}</p>`;
+ return `<p class="edit-note">✎ Upraveno restaurací ${esc(when)}</p>${e.note?`<p class="order-note">${esc(e.note)}</p>`:''}`;
 }
 
 // Úprava objednávky restaurací za firmu – jakýkoli den, i po uzávěrce.
@@ -803,8 +811,11 @@ async function adminEditModal(date){
   <p class="modal-sub">${d.closed?'Den je po uzávěrce – firma sama už měnit nemůže. ':''}Nastavte počty porcí. 0 jídlo z objednávky odebere.</p>
   <form id="admin-order-form" data-company="${d.company.id}" data-date="${date}" data-name="${esc(d.company.name)}">
    <div class="admin-edit-list">${d.meals.map(m=>`<div class="admin-edit-row">
-    <div><b>${esc(m.name)}</b><small>${m.category==='Polévka'?'Polévka':'M'+m.slot} · ${unit(m)}${m.locked?' · cena z objednávky':''}</small></div>
-    <div class="admin-edit-qty"><button type="button" class="secondary" data-edit-delta="-1" aria-label="Ubrat">−</button><input type="number" name="q${m.id}" data-meal="${m.id}" min="0" max="500" step="1" value="${m.quantity}" inputmode="numeric"><button type="button" class="secondary" data-edit-delta="1" aria-label="Přidat">+</button></div>
+    <div class="admin-edit-main">
+     <div><b>${esc(m.name)}</b><small>${m.category==='Polévka'?'Polévka':'M'+m.slot} · ${unit(m)}${m.locked?' · cena z objednávky':''}</small></div>
+     <div class="admin-edit-qty"><button type="button" class="secondary" data-edit-delta="-1" aria-label="Ubrat">−</button><input type="number" name="q${m.id}" data-meal="${m.id}" min="0" max="500" step="1" value="${m.quantity}" inputmode="numeric"><button type="button" class="secondary" data-edit-delta="1" aria-label="Přidat">+</button></div>
+    </div>
+    <input type="text" class="admin-edit-note" data-note="${m.id}" maxlength="200" value="${esc(m.note||'')}" placeholder="Poznámka pro kuchyň" aria-label="Poznámka pro kuchyň – ${esc(m.name)}">
    </div>`).join('')}</div>
    <button class="primary full">Uložit úpravu</button>
   </form>`);
@@ -819,12 +830,12 @@ document.addEventListener('submit',async e=>{
  const f=e.target;if(f.id!=='admin-order-form')return;
  e.preventDefault();const btn=f.querySelector('button.primary');btn.disabled=true;
  try{
-  const items=[...f.querySelectorAll('input[data-meal]')].map(i=>({id:Number(i.dataset.meal),quantity:Number(i.value)}));
+  const items=[...f.querySelectorAll('input[data-meal]')].map(i=>({id:Number(i.dataset.meal),quantity:Number(i.value),note:f.querySelector(`[data-note="${i.dataset.meal}"]`)?.value||''}));
   if(items.some(x=>!Number.isInteger(x.quantity)||x.quantity<0||x.quantity>500))throw new Error('Počet porcí musí být celé číslo od 0 do 500.');
   const r=await api('admin/order',{company_id:Number(f.dataset.company),date:f.dataset.date,items});
   $('#modal').close();await render();
   const kdy=dateLabel(f.dataset.date,{weekday:'long',day:'numeric',month:'numeric'});
-  toast(r.changed?{title:'Objednávka upravena',text:`${f.dataset.name} · ${kdy} — kuchyňský list i součty jsou přepočítané.`}:{title:'Beze změny',text:`${f.dataset.name} · ${kdy} — počty porcí zůstaly stejné.`},false,6000);
+  toast(r.changed?{title:'Objednávka upravena',text:`${f.dataset.name} · ${kdy} — kuchyňský list i součty jsou přepočítané.`}:r.notes?{title:r.notes===1?'Poznámka uložena':'Poznámky uloženy',text:`${f.dataset.name} · ${kdy}`}:{title:'Beze změny',text:`${f.dataset.name} · ${kdy} — počty porcí zůstaly stejné.`},false,6000);
  }catch(err){btn.disabled=false;toast(err.message,true);}
 });
 
