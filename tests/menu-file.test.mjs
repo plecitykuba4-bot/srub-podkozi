@@ -172,3 +172,41 @@ test('Lístek nese sjednané ceny firmy a firma se k cizím nedostane', async ()
     rmSync(dir, {recursive: true, force: true});
   }
 });
+
+test('Firmu s poznámkou jde odebrat', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'srub-del-'));
+  const port = 34320 + Math.floor(Math.random() * 1000);
+  const origin = `http://127.0.0.1:${port}`;
+  const proc = spawn(process.execPath, ['server.mjs'], {cwd: new URL('..', import.meta.url), env: {...process.env, DEMO: 'true', PORT: String(port), DATA_DIR: dir, HOST: '127.0.0.1'}, stdio: ['ignore', 'pipe', 'pipe']});
+  let error = '';
+  proc.stderr.on('data', x => error += x);
+  await Promise.race([
+    once(proc.stdout, 'data'),
+    once(proc, 'exit').then(() => {throw new Error(error);}),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Server startup timeout: ' + error)), 10000).unref())
+  ]);
+  const call = async (path, data, cookie = '') => {
+    const r = await fetch(origin + '/api/' + path, {method: data ? 'POST' : 'GET', headers: {...(data ? {'Content-Type': 'application/json', Origin: origin} : {}), Cookie: cookie}, body: data ? JSON.stringify(data) : undefined});
+    return {status: r.status, raw: r, cookie: r.headers.get('set-cookie')?.split(';')[0]};
+  };
+  try {
+    const admin = (await call('login', {email: 'restaurace@demo.cz', password: 'SrubDemo2026!'})).cookie;
+    const date = dayAfter(pragueNow().date, 2);
+    await call('meals', {date, name: 'Guláš', description: '', allergens: '1', price: 150, category: 'Hlavní jídlo'}, admin);
+    await call('companies', {name: 'Zkouška', email: 'zkouska-del@example.cz', address: '', price: 150, soup_price: '', packaging: 'disposable', fee: 10, password: 'ZkouskaPassword123'}, admin);
+    const firm = (await (await call('dashboard?date=' + date, null, admin)).raw.json()).companies.find(c => c.email === 'zkouska-del@example.cz');
+
+    // Poznámka u jídla bez objednané porce drží cizí klíč na firmu.
+    const meal = (await (await call(`admin/order?company=${firm.id}&date=${date}`, null, admin)).raw.json()).meals[0];
+    await call('admin/order', {company_id: firm.id, date, items: [{id: meal.id, quantity: 0, note: 'jen poznámka'}]}, admin);
+
+    const del = await call('companies/delete', {id: firm.id}, admin);
+    assert.equal(del.status, 200, 'firmu s poznámkou nejde odebrat: ' + JSON.stringify(await del.raw.json()));
+    const left = (await (await call('dashboard?date=' + date, null, admin)).raw.json()).companies.find(c => c.email === 'zkouska-del@example.cz');
+    assert.equal(left, undefined, 'firma v seznamu zůstala');
+  } finally {
+    proc.kill();
+    await once(proc, 'exit');
+    rmSync(dir, {recursive: true, force: true});
+  }
+});

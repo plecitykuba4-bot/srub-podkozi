@@ -432,6 +432,11 @@ const server=http.createServer(async(req,res)=>{
    transaction(()=>{
     run('DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE company_id=?)',firm.id);
     run('DELETE FROM users WHERE company_id=?',firm.id);
+    // Vedlejší záznamy firmy musí odejít s ní: poznámky drží cizí klíč a mazaní by na něm
+    // selhalo, zbytek by zůstal osiřelý a pletl se do vyúčtování nové firmy se stejným id.
+    run('DELETE FROM order_notes WHERE company_id=?',firm.id);
+    run('DELETE FROM order_edits WHERE company_id=?',firm.id);
+    run('DELETE FROM payments WHERE company_id=?',firm.id);
     run('DELETE FROM companies WHERE id=?',firm.id);
    });
    return send(200,{ok:true,name:firm.name});
