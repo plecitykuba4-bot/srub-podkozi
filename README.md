@@ -33,6 +33,7 @@ Demo běží jen na localhost, neodesílá e-maily, obsahuje fiktivní firmy a p
 - Jídelní lístek ke stažení pro firmy. Tlačítko v Jídelníčku otevře celý týden na jedné A4 ve vzhledu tištěného menu (`lib/menu-sheet.mjs`) a rovnou nabídne tisk – odtud se ukládá jako PDF. Vykresluje se z dat, takže funguje i pro týdny nahrané přes CSV nebo zadané ručně. Patičku s doplňkovou nabídkou (omáčky, pečivo, krabička) nastavíte v Nastavení.
 - Když restaurace lístek nahraje jako PDF nebo fotku, originál se uloží k danému týdnu a firma si ho může stáhnout vedle vykreslené verze. Starší nahrání originál nemají – ukládá se až od téhle změny.
 - Pořadí jídel v přehledech drží jídelní lístek (polévka, pak hlavní M1–M4), ne pořadí, v jakém firmy objednávaly.
+- Pořadí firem v kuchyňském listu jde podle toho, jak kuchaři porce připravují, ne podle abecedy. Seznam je v `scripts/kitchen-order.mjs`; po úpravě se spustí `node scripts/kitchen-order.mjs`, který pořadí zapiše do databáze a vypíše výsledek. Firma, která v seznamu není, se řadí na konec podle jména – nikdy nevypadne.
 
 ## Soubor CSV
 

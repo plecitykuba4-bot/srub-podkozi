@@ -49,6 +49,9 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
 for(const n of [1,2,3,4])addColumnIfMissing('companies',`price_m${n}`,'INTEGER');
 // Jak se firmě vyúčtovává: po týdnech, nebo za celý kalendářní měsíc.
 addColumnIfMissing('companies','billing',"TEXT NOT NULL DEFAULT 'week'");
+// Pořadí firem v kuchyňském listu. Kuchaři připravují porce v zabydleném pořadí,
+// které není abecední; prázdná hodnota řadí firmu na konec podle jména.
+addColumnIfMissing('companies','sort_order','INTEGER');
 
 
 // Co od majitele přijímáme jako lístek a pod jakou příponou to firmě nabídneme.
@@ -135,7 +138,7 @@ if(demo){
 function session(req){const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('srub_session='))?.slice(13);if(!raw)return null;const token=createHash('sha256').update(raw).digest('hex');return get(`SELECT u.id,u.email,u.role,u.company_id,COALESCE(c.name,CASE u.role WHEN 'owner' THEN 'Tichý přehled' ELSE 'Restaurace Srub Podkozí' END) name FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN companies c ON c.id=u.company_id WHERE s.token=? AND s.expires>? AND (u.role IN ('admin','owner') OR c.active=1)`,token,Date.now());}
 // Řádky nesou i slot jídla z jídelníčku (polévka 0, hlavní M1–M4), aby přehledy
 // a kuchyňský list držely pořadí z lístku, ne pořadí, v jakém firmy objednaly.
-function rowsFor(date,company){return all(`SELECT o.*,m.name,m.description,m.date,m.category,m.slot,c.name company,c.address,COALESCE(n.note,'') note FROM orders o JOIN (${SQL_MEALS_WITH_SLOT}) m ON m.id=o.meal_id JOIN companies c ON c.id=o.company_id LEFT JOIN order_notes n ON n.company_id=o.company_id AND n.meal_id=o.meal_id WHERE 1=1 ${company?'AND o.company_id=?':''} ORDER BY c.name,m.slot`,...company?[date,company]:[date]);}
+function rowsFor(date,company){return all(`SELECT o.*,m.name,m.description,m.date,m.category,m.slot,c.name company,c.address,c.sort_order,COALESCE(n.note,'') note FROM orders o JOIN (${SQL_MEALS_WITH_SLOT}) m ON m.id=o.meal_id JOIN companies c ON c.id=o.company_id LEFT JOIN order_notes n ON n.company_id=o.company_id AND n.meal_id=o.meal_id WHERE 1=1 ${company?'AND o.company_id=?':''} ORDER BY c.name,m.slot`,...company?[date,company]:[date]);}
 async function paymentFor(c,date){
  const p=periodFor(date,c.billing);
  const amount=get('SELECT COALESCE(SUM(o.quantity*(o.price+o.fee)),0) total FROM orders o JOIN meals m ON m.id=o.meal_id WHERE o.company_id=? AND m.date BETWEEN ? AND ?',c.id,p.from,p.to).total;

@@ -27,3 +27,26 @@ test('Mřížka v hlášení drží stejné pořadí', () => {
   const order = ['Gulášová', 'Svíčková', 'Řízek'].map(n => html.indexOf(n));
   assert.ok(order[0] < order[1] && order[1] < order[2], 'jídla nejsou v pořadí z lístku');
 });
+
+// Kuchaři připravují porce v zabydleném pořadí firem, které není abecední.
+test('Kuchyňský list řadí firmy podle nastaveného pořadí, ne podle abecedy', async () => {
+  const rows = [
+    {company_id: 1, company: 'Autosklo', sort_order: 70, packaging: 'own', quantity: 1, name: 'Vývar', category: 'Polévka', slot: 0},
+    {company_id: 2, company: 'Fish', sort_order: 10, packaging: 'own', quantity: 2, name: 'Vývar', category: 'Polévka', slot: 0},
+    {company_id: 3, company: 'Sedlo', sort_order: 20, packaging: 'own', quantity: 3, name: 'Vývar', category: 'Polévka', slot: 0},
+    // Nová firma bez pořadí patří na konec, i když je abecedně první.
+    {company_id: 4, company: 'Alfa', sort_order: null, packaging: 'own', quantity: 1, name: 'Vývar', category: 'Polévka', slot: 0}
+  ];
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(await kitchenWorkbook('2026-10-05', rows));
+  const sheet = book.getWorksheet(1);
+  let firms = [];
+  sheet.eachRow((r, i) => {
+    if (typeof r.getCell(1).value === 'string' && /VLASTNÍ/i.test(r.getCell(1).value)) {
+      const head = sheet.getRow(i + 1), out = [];
+      head.eachCell(c => out.push(String(c.value)));
+      firms = out.slice(1, -1);
+    }
+  });
+  assert.deepEqual(firms, ['Fish', 'Sedlo', 'Autosklo', 'Alfa']);
+});

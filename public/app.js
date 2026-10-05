@@ -280,7 +280,9 @@ function kitchenBlocks(){
  const noteOf=(companyId,name)=>rows.filter(r=>r.company_id===companyId&&r.name===name&&r.note).map(r=>r.note).join(' ');
  const block=(packaging,title)=>{
   const ids=[...new Set(rows.filter(r=>r.packaging===packaging).map(r=>r.company_id))];
-  const firms=ids.map(id=>({id,name:rows.find(r=>r.company_id===id).company}));
+  // Stejné pořadí firem jako na tištěném kuchyňském listu.
+  const firms=ids.map(id=>{const row=rows.find(r=>r.company_id===id);return {id,name:row.company,sort_order:row.sort_order};})
+   .sort((a,b)=>{const x=a.sort_order??Infinity,y=b.sort_order??Infinity;return x===y?a.name.localeCompare(b.name,'cs'):x-y;});
   if(!firms.length)return `<section class="ks-block"><h2>${title}</h2><p class="ks-empty">Na tento den nikdo neobjednal.</p></section>`;
   const dishTotal=name=>firms.reduce((s,f)=>s+qty(f.id,name),0);
   const firmTotal=id=>dishes.reduce((s,x)=>s+qty(id,x.name),0);
