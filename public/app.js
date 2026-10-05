@@ -278,6 +278,8 @@ function kitchenBlocks(){
  const qty=(companyId,name)=>rows.filter(r=>r.company_id===companyId&&r.name===name).reduce((s,r)=>s+r.quantity,0);
  // Poznámka patří k té jedné porci, proto se kreslí do buňky jídla, ne k firmě.
  const noteOf=(companyId,name)=>rows.filter(r=>r.company_id===companyId&&r.name===name&&r.note).map(r=>r.note).join(' ');
+ // Co už je vychystané. Drží se na serveru, takže odkliknutí vidí i druhý kuchař.
+ const hotovo=id=>(d.done||[]).includes(id);
  const block=(packaging,title)=>{
   const ids=[...new Set(rows.filter(r=>r.packaging===packaging).map(r=>r.company_id))];
   // Stejné pořadí firem jako na tištěném kuchyňském listu.
@@ -288,9 +290,9 @@ function kitchenBlocks(){
   const firmTotal=id=>dishes.reduce((s,x)=>s+qty(id,x.name),0);
   return `<section class="ks-block"><h2>${title} <small>${firms.length} ${plural(firms.length,'firma','firmy','firem')}</small></h2>
    <div class="ks-scroll"><table class="ks-table">
-   <thead><tr><th class="ks-dish">Jídlo</th>${firms.map(f=>`<th><span>${esc(f.name)}</span></th>`).join('')}<th class="ks-sum">Celkem</th></tr></thead>
-   <tbody>${dishes.map(x=>`<tr class="${x.soup?'ks-soup':''}"><td class="ks-dish">${esc(x.name)}</td>${firms.map(f=>{const q=qty(f.id,x.name),n=noteOf(f.id,x.name);return `<td>${q||'<span class="ks-zero">–</span>'}${n?`<em class="ks-note">${esc(n)}</em>`:''}</td>`;}).join('')}<td class="ks-sum">${dishTotal(x.name)}</td></tr>`).join('')}</tbody>
-   <tfoot><tr><td class="ks-dish">Celkem za firmu</td>${firms.map(f=>`<td>${firmTotal(f.id)}</td>`).join('')}<td class="ks-sum">${firms.reduce((s,f)=>s+firmTotal(f.id),0)}</td></tr></tfoot>
+   <thead><tr><th class="ks-dish">Jídlo</th>${firms.map(f=>`<th class="${hotovo(f.id)?'is-done':''}"><button type="button" class="ks-check" data-kitchen-done="${f.id}" aria-pressed="${hotovo(f.id)}" title="${hotovo(f.id)?'Vychystané – zrušit':'Označit jako vychystané'}"><span class="ks-tick" aria-hidden="true">✓</span><span>${esc(f.name)}</span></button></th>`).join('')}<th class="ks-sum">Celkem</th></tr></thead>
+   <tbody>${dishes.map(x=>`<tr class="${x.soup?'ks-soup':''}"><td class="ks-dish">${esc(x.name)}</td>${firms.map(f=>{const q=qty(f.id,x.name),n=noteOf(f.id,x.name);return `<td class="${hotovo(f.id)?'is-done':''}">${q||'<span class="ks-zero">–</span>'}${n?`<em class="ks-note">${esc(n)}</em>`:''}</td>`;}).join('')}<td class="ks-sum">${dishTotal(x.name)}</td></tr>`).join('')}</tbody>
+   <tfoot><tr><td class="ks-dish">Celkem za firmu</td>${firms.map(f=>`<td class="${hotovo(f.id)?'is-done':''}">${firmTotal(f.id)}</td>`).join('')}<td class="ks-sum">${firms.reduce((s,f)=>s+firmTotal(f.id),0)}</td></tr></tfoot>
    </table></div></section>`;};
  const totalFor=(name,packaging)=>rows.filter(r=>r.name===name&&r.packaging===packaging).reduce((s,r)=>s+r.quantity,0);
  return `
@@ -823,6 +825,20 @@ async function adminEditModal(date){
   </form>`);
 }
 document.addEventListener('click',async e=>{
+ // Odkliknutí firmy v kuchyni. Sloupec se přebarví hned, server se doplňuje na pozadí;
+ // když zpráva neproleze, vrátí se původní stav, ať list neukazuje nepravdu.
+ const done=e.target.closest('[data-kitchen-done]');
+ if(done){
+  const id=Number(done.dataset.kitchenDone), bylo=done.getAttribute('aria-pressed')==='true';
+  const bunky=[...done.closest('table').querySelectorAll('tr')].map(tr=>tr.children[[...done.closest('tr').children].indexOf(done.closest('th'))]).filter(Boolean);
+  const nastav=v=>{done.setAttribute('aria-pressed',String(v));bunky.forEach(b=>b.classList.toggle('is-done',v));};
+  nastav(!bylo);
+  try{
+   await api('kitchen/done',{date:state.date,company_id:id,done:!bylo});
+   state.data.done=!bylo?[...(state.data.done||[]),id]:(state.data.done||[]).filter(x=>x!==id);
+  }catch(err){nastav(bylo);toast(err.message,true);}
+  return;
+ }
  const edit=e.target.closest('[data-admin-edit]');
  if(edit){try{await adminEditModal(edit.dataset.adminEdit);}catch(err){toast(err.message,true);}return;}
  const delta=e.target.closest('[data-edit-delta]');

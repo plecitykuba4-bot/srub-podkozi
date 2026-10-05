@@ -44,6 +44,9 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  -- Poznámka restaurace ke konkrétnímu jídlu firmy, např. „jeden s bramborem místo hranolek“.
  -- Stojí mimo objednávku: začne se psát dřív, než se zadá počet porcí, a přežije i nulu.
  CREATE TABLE IF NOT EXISTS order_notes(company_id INTEGER NOT NULL REFERENCES companies(id),meal_id INTEGER NOT NULL REFERENCES meals(id),note TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(company_id,meal_id));
+ -- Co už je v kuchyni vychystané. Drží se na serveru, aby odkliknutí viděl každý,
+ -- kdo na list kouká, a platilo jen pro ten jeden den.
+ CREATE TABLE IF NOT EXISTS kitchen_done(date TEXT NOT NULL,company_id INTEGER NOT NULL REFERENCES companies(id),done_at TEXT NOT NULL,PRIMARY KEY(date,company_id));
  CREATE TABLE IF NOT EXISTS menu_files(week_start TEXT PRIMARY KEY,mime TEXT NOT NULL,name TEXT NOT NULL,data BLOB NOT NULL,uploaded TEXT NOT NULL);
 `);
 for(const n of [1,2,3,4])addColumnIfMissing('companies',`price_m${n}`,'INTEGER');
@@ -389,7 +392,15 @@ const server=http.createServer(async(req,res)=>{
    });
    return send(200,{ok:true,changed,notes});
   }
-  if(path==='/api/dashboard'&&req.method==='GET'){const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');return send(200,{...summary(date),closed:closed(date),companies:all('SELECT * FROM companies ORDER BY name'),report:get('SELECT date,status,sent,error FROM reports WHERE date=?',date)||null});}
+  if(path==='/api/dashboard'&&req.method==='GET'){const date=url.searchParams.get('date')||pragueNow().date;if(!validDate(date))throw new Error('Neplatné datum.');return send(200,{...summary(date),closed:closed(date),companies:all('SELECT * FROM companies ORDER BY name'),done:all('SELECT company_id FROM kitchen_done WHERE date=?',date).map(x=>x.company_id),report:get('SELECT date,status,sent,error FROM reports WHERE date=?',date)||null});}
+  // Odkliknutí firmy v kuchyni – vychystané, jde se na další.
+  if(path==='/api/kitchen/done'&&req.method==='POST'){
+   if(!validDate(body.date)||!Number.isInteger(body.company_id))throw new Error('Neplatný požadavek.');
+   if(!get('SELECT id FROM companies WHERE id=?',body.company_id))throw new Error('Firma neexistuje.');
+   if(body.done)run('INSERT INTO kitchen_done VALUES(?,?,?) ON CONFLICT(date,company_id) DO NOTHING',body.date,body.company_id,new Date().toISOString());
+   else run('DELETE FROM kitchen_done WHERE date=? AND company_id=?',body.date,body.company_id);
+   return send(200,{ok:true,done:Boolean(body.done)});
+  }
   if(path==='/api/menu/read'&&req.method==='POST'){
    if(!process.env.ANTHROPIC_API_KEY)throw new Error('Čtení lístku není nastavené. Doplňte ANTHROPIC_API_KEY do .env a restartujte server.');
    // Denní strop volání, aby chyba nebo překlikání nespotřebovaly kredit.

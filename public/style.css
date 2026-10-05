@@ -314,6 +314,17 @@ h1,h2,h3,h4,p,button,input,select,textarea,label,.photo-layout-head h1,.photo-se
 .ks-block h2 small{color:#776b58;font-size:12px;font-weight:650;margin-left:6px}
 .ks-empty{margin:0;color:#776b58;font-size:14px}
 .ks-scroll{overflow-x:auto;border:1px solid #eee2cf;border-radius:12px;background:#fffdfa}
+/* Odkliknutí vychystané firmy: celý sloupec zezelená, ať je na první pohled vidět,
+   kde už kuchyň skončila. Fajfka je tlačítko v záhlaví sloupce. */
+.ks-check{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:3px 4px;border-radius:7px;background:none;color:inherit;font:inherit;font-size:inherit;font-weight:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer;min-height:0}
+.ks-check:hover{background:#fff1cf}
+.ks-tick{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;flex:none;border:1.5px solid #cbb98f;border-radius:5px;background:#fff;color:transparent;font-size:12px;line-height:1}
+.ks-check[aria-pressed="true"] .ks-tick{border-color:#2f8f4e;background:#2f8f4e;color:#fff}
+.ks-table th.is-done,.ks-table td.is-done{background:#e8f6ec}
+.ks-table th.is-done .ks-check{color:#1f6b39}
+.ks-table td.is-done{color:#2f6b45}
+.ks-table tfoot td.is-done{background:#d6eedd;color:#1f6b39}
+
 .ks-table{border-collapse:collapse;width:100%;font-size:13px}
 .ks-table th,.ks-table td{border-bottom:1px solid #f0e6d3;border-right:1px solid #f0e6d3;padding:8px 6px;text-align:center;white-space:nowrap}
 .ks-table th:last-child,.ks-table td:last-child{border-right:0}

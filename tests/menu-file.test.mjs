@@ -210,3 +210,51 @@ test('Firmu s poznámkou jde odebrat', async () => {
     rmSync(dir, {recursive: true, force: true});
   }
 });
+
+test('Kuchyně si odklikne vychystanou firmu a stav drží na serveru', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'srub-done-'));
+  const port = 35320 + Math.floor(Math.random() * 1000);
+  const origin = `http://127.0.0.1:${port}`;
+  const proc = spawn(process.execPath, ['server.mjs'], {cwd: new URL('..', import.meta.url), env: {...process.env, DEMO: 'true', PORT: String(port), DATA_DIR: dir, HOST: '127.0.0.1'}, stdio: ['ignore', 'pipe', 'pipe']});
+  let error = '';
+  proc.stderr.on('data', x => error += x);
+  await Promise.race([
+    once(proc.stdout, 'data'),
+    once(proc, 'exit').then(() => {throw new Error(error);}),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Server startup timeout: ' + error)), 10000).unref())
+  ]);
+  const call = async (path, data, cookie = '') => {
+    const r = await fetch(origin + '/api/' + path, {method: data ? 'POST' : 'GET', headers: {...(data ? {'Content-Type': 'application/json', Origin: origin} : {}), Cookie: cookie}, body: data ? JSON.stringify(data) : undefined});
+    return {status: r.status, raw: r, cookie: r.headers.get('set-cookie')?.split(';')[0]};
+  };
+  const done = async (date, cookie) => (await (await call('dashboard?date=' + date, null, cookie)).raw.json()).done;
+  try {
+    const admin = (await call('login', {email: 'restaurace@demo.cz', password: 'SrubDemo2026!'})).cookie;
+    const date = dayAfter(pragueNow().date, 2);
+    const firm = (await (await call('dashboard?date=' + date, null, admin)).raw.json()).companies[0];
+
+    assert.deepEqual(await done(date, admin), [], 'den začíná bez odkliknutých firem');
+
+    assert.equal((await call('kitchen/done', {date, company_id: firm.id, done: true}, admin)).status, 200);
+    assert.deepEqual(await done(date, admin), [firm.id], 'odkliknutí se neuložilo');
+
+    // Dvakrát za sebou nesmí zdvojit záznam.
+    await call('kitchen/done', {date, company_id: firm.id, done: true}, admin);
+    assert.deepEqual(await done(date, admin), [firm.id]);
+
+    // Platí jen pro ten jeden den.
+    assert.deepEqual(await done(dayAfter(date, 1), admin), [], 'odkliknutí přeteklo do jiného dne');
+
+    // Odkliknutí zpět.
+    await call('kitchen/done', {date, company_id: firm.id, done: false}, admin);
+    assert.deepEqual(await done(date, admin), []);
+
+    // Firma do kuchyňského listu nevidí.
+    const client = (await call('login', {email: 'fish@demo.cz', password: 'SrubDemo2026!'})).cookie;
+    assert.equal((await call('kitchen/done', {date, company_id: firm.id, done: true}, client)).status, 403);
+  } finally {
+    proc.kill();
+    await once(proc, 'exit');
+    rmSync(dir, {recursive: true, force: true});
+  }
+});

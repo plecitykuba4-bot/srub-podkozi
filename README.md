@@ -34,6 +34,7 @@ Demo běží jen na localhost, neodesílá e-maily, obsahuje fiktivní firmy a p
 - Když restaurace lístek nahraje jako PDF nebo fotku, originál se uloží k danému týdnu a firma si ho může stáhnout vedle vykreslené verze. Starší nahrání originál nemají – ukládá se až od téhle změny.
 - Pořadí jídel v přehledech drží jídelní lístek (polévka, pak hlavní M1–M4), ne pořadí, v jakém firmy objednávaly.
 - Pořadí firem v kuchyňském listu jde podle toho, jak kuchaři porce připravují, ne podle abecedy. Seznam je v `scripts/kitchen-order.mjs`; po úpravě se spustí `node scripts/kitchen-order.mjs`, který pořadí zapiše do databáze a vypíše výsledek. Firma, která v seznamu není, se řadí na konec podle jména – nikdy nevypadne.
+- V kuchyňském listu si kuchyň odklikne firmu, kterou už vychystala – fajfka v záhlaví sloupce, celý sloupec zezelená. Stav se ukládá na server, takže ho vidí i druhý kuchař na jiném zařízení, a platí vždy jen pro ten jeden den.
 
 ## Soubor CSV
 
